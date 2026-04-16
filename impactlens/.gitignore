@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project-specific
+*.log
+results.json
+/tmp/
+tree-sitter-java/        # if built locally
+build/tree-sitter/
+
+# Java
+*.class
+target/
+.mvn/wrapper/maven-wrapper.jar
+!sample_repos/**/target/.gitkeep
