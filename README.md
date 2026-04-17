@@ -67,6 +67,7 @@ The system follows a ports-and-adapters pattern. The core pipeline is language-a
 See [docs/architecture.md](docs/architecture.md) for the full design document.
 
 ## Setup Instructions
+ Run the scripts/setup_sample-repo.sh - bash scripts/setup_sample_repo.sh
 
 ### Prerequisites
 
