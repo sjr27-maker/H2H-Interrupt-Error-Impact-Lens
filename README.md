@@ -94,9 +94,28 @@ pip install -e ".[dev]"
 impactlens --version
 impactlens --help
 ```
+### Build progress
+### ✅ Day 1 — Foundation _(Wed, April 16)_
 
-### Run against the sample Java project
+- [x] 📦 Repository initialized + submitted via Google Form
+- [x] 📐 Pydantic data models defined (`SourceSymbol`, `CallEdge`, `ChangedRegion`, `TestCase`, `ImpactResult`)
+- [x] 🔌 `LanguageAdapter` abstract base class with 3 abstract methods
+- [x] 📇 Adapter registry with self-registration pattern
+- [x] ☕ Java adapter scaffolded — Tree-sitter parser wrapper in place
+- [x] 💻 Click + Rich CLI scaffolded (`analyze`, `languages` commands)
+- [x] ☕ Sample Maven project — 5 source classes, 5 JUnit test classes, layered dependencies
+- [x] 🧪 Pytest smoke suite covering the data models
+- [x] 📚 Architecture & data-contract documentation
 
+### ✅ Day 2 — Java Parsing & Git Diff _(Thu, April 17)_
+
+- [x] 🔀 Git diff extractor with hunk-level line-range precision via GitPython
+- [x] 🌳 Full Tree-sitter Java parser — classes, methods, constructors, imports, invocations
+- [x] ☕ JavaAdapter complete — symbol extraction, call resolution with import-aware name lookup, `@Test` detection
+- [x] 🕸️ Call graph builder with `ancestors`, `descendants`, and file-level queries via NetworkX
+- [x] 💻 CLI `analyze` command now runs real diff extraction + symbol parsing with Rich table output
+- [x] 📦 Sample repo enhanced — 5-commit history with scripted setup (`scripts/setup_sample_repo.sh`)
+- [x] 🧪 15+ tests covering parser, adapter, diff extractor, and full integration pipeline
 ```bash
 # Full usage available Day 3+; Day 1 supports --help only
 impactlens analyze sample_repos/java_demo --base HEAD~1 --head HEAD
