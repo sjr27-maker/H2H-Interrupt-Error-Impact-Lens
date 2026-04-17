@@ -123,7 +123,12 @@ impactlens analyze sample_repos/java_demo --base HEAD~1 --head HEAD
 
 ## Demo / Screenshots
 
-Screenshots and a 3–5 minute demo video will be added by April 23. Watch this section for updates.
+*Initial testing of diff detection of sample repo:*
+<img src="impactlens/docs/images/inital-test-diff_detection.png" width="600"/>
+
+*The output for the referenced test*
+<img src="impactlens/docs/images/output-initial-diff-analyser.png" width="600"/>
+
 
 ## Team Members
 
