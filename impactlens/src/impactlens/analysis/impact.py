@@ -41,8 +41,11 @@ def _find_changed_symbols(
 
     # Group regions by file
     regions_by_file: dict[str, list[ChangedRegion]] = {}
+    log.debug("Regions grouped by file: %s", list(regions_by_file.keys()))
+    log.debug("Graph files: %s", sorted(set(s.file_path for s in graph._symbols.values())))
     for r in regions:
-        regions_by_file.setdefault(r.file_path, []).append(r)
+        normalized_path = r.file_path.replace("\\", "/")
+        regions_by_file.setdefault(normalized_path, []).append(r)
 
     for file_path, file_regions in regions_by_file.items():
         # Get all symbols defined in this file from the graph

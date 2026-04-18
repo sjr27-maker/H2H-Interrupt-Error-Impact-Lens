@@ -88,16 +88,12 @@ class LanguageAdapter(ABC):
         file_symbols: Iterable[SourceSymbol],
         changed_regions: Iterable[ChangedRegion],
     ) -> list[SourceSymbol]:
-        """Given a file's symbols and the ranges changed in it, return which
-        symbols overlap the changes. Language-agnostic default; adapters can
-        override for language-specific logic (e.g., imports at file top)."""
         out: list[SourceSymbol] = []
         for region in changed_regions:
             rng = region.new_range or region.old_range
             if rng is None:
                 continue
             for sym in file_symbols:
-                # Overlap check: intervals [sym.start,sym.end] and [rng.start,rng.end]
                 if sym.start_line <= rng.end and rng.start <= sym.end_line:
                     out.append(sym)
         # Dedupe preserving order

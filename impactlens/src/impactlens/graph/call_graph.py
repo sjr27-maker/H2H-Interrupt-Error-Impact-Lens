@@ -105,12 +105,16 @@ class CallGraph:
         for sid in symbol_ids:
             sym = self._symbols.get(sid)
             if sym:
-                files.add(sym.file_path)
+                files.add(sym.file_path.replace("\\", "/"))
         return files
 
     def symbols_in_file(self, file_path: str) -> list[SourceSymbol]:
         """Get all symbols defined in a specific file."""
-        return [s for s in self._symbols.values() if s.file_path == file_path]
+        normalized = file_path.replace("\\", "/")
+        return [
+            s for s in self._symbols.values()
+            if s.file_path.replace("\\", "/") == normalized
+        ]   
 
     def summary(self) -> dict:
         """Return a summary dict for logging/debugging."""

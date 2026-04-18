@@ -64,17 +64,14 @@ def _parse_hunks(diff_text: str) -> list[tuple[LineRange | None, LineRange | Non
 
 
 def _get_file_path(diff_item: Diff) -> str:
-    """Get the relevant file path from a diff item.
-
-    For renames, returns the NEW path (b_path).
-    For deletions, returns the OLD path (a_path).
-    Otherwise, returns whichever is available, preferring b_path.
-    """
+    """Get the relevant file path from a diff item, always with forward slashes."""
     if diff_item.deleted_file:
-        return diff_item.a_path
-    if diff_item.b_path:
-        return diff_item.b_path
-    return diff_item.a_path
+        path = diff_item.a_path
+    elif diff_item.b_path:
+        path = diff_item.b_path
+    else:
+        path = diff_item.a_path
+    return path.replace("\\", "/") if path else ""
 
 
 def extract_changed_regions(
@@ -132,7 +129,7 @@ def extract_changed_regions(
 
         old_path = None
         if diff_item.renamed_file and diff_item.a_path:
-            old_path = diff_item.a_path
+            old_path = diff_item.a_path.replace("\\", "/")
 
         if change_type == ChangeType.ADDED:
             # Entire file is new — count total lines in the new blob

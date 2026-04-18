@@ -87,12 +87,12 @@ class JavaAdapter(LanguageAdapter):
         """Create a SymbolId: 'java:<qualified_name>'."""
         return f"java:{qualified_name}"
 
+    # In adapter.py _relative_path:
     def _relative_path(self, file_path: Path, repo_root: Path) -> str:
-        """Get repo-relative path as string."""
         try:
-            return str(file_path.relative_to(repo_root))
+            return str(file_path.relative_to(repo_root)).replace("\\", "/")
         except ValueError:
-            return str(file_path)
+            return str(file_path).replace("\\", "/")
 
     # ----- parsing ---------------------------------------------------------
 
