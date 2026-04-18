@@ -137,11 +137,11 @@ impactlens --help
 *Initial testing of diff detection of sample repo:*
 <img src="impactlens/docs/images/inital-test-diff_detection.png" width="600"/>
 
-*The output for the referenced test*
-<img src="impactlens/docs/images/output-initial-diff-analyser.png" width="600"/>
-
 *final pipeline working with multiple tests*
 <img src="impactlens/docs/images/full_output1.png" width="600"/>
+
+The output for the referenced test*
+<img src="impactlens/docs/images/output-initial-diff-analyser.png" width="600"/>
 
 
 ## Team Members
