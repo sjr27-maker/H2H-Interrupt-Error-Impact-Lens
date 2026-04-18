@@ -117,8 +117,19 @@ impactlens --help
 - [x] 📦 Sample repo enhanced — 5-commit history with scripted setup (`scripts/setup_sample_repo.sh`)
 - [x] 🧪 15+ tests covering parser, adapter, diff extractor, and full integration pipeline
 ```bash
-# Full usage available Day 3+; Day 1 supports --help only
-impactlens analyze sample_repos/java_demo --base HEAD~1 --head HEAD
+### ✅ Day 3 — Impact Analysis & Test Execution _(Fri, April 18)_
+
+- [x] 💥 Reverse-BFS impact analyzer with class expansion and 7 unit tests
+- [x] 🎯 Two-layer test mapper (convention + import-based matching) with 5 tests
+- [x] 🧪 Maven Surefire runner with XML report parsing and baseline comparison
+- [x] 🎼 Pipeline orchestrator stitching all stages with per-stage timings
+- [x] 💻 CLI complete — blast radius tree, test selection table, timing panel
+- [x] 🔗 End-to-end pipeline integration tests with 6 scenarios
+- [x] 📊 3 demo scenarios verified (leaf change, mid-level ripple, new file)
+*analyze*
+| `impactlens analyze <path> --base <ref> --head <ref>` | ✅ | Full pipeline: diff → parse → graph → impact → test selection |
+| `impactlens analyze ... --run-tests` | ✅ | Execute selected JUnit tests via Maven Surefire |
+| `impactlens analyze ... --json-out <file>` | ✅ | Export full analysis results as JSON |
 ```
 
 ## Demo / Screenshots
@@ -128,6 +139,9 @@ impactlens analyze sample_repos/java_demo --base HEAD~1 --head HEAD
 
 *The output for the referenced test*
 <img src="impactlens/docs/images/output-initial-diff-analyser.png" width="600"/>
+
+*final pipeline working with multiple tests*
+<img src="impactlens/docs/images/full_output1.png" width="600"/>
 
 
 ## Team Members
@@ -141,4 +155,4 @@ Sooraj R Nair — Platform Engineer — CLI, web dashboard, test runner, deploym
 
 ---
 
- — T John Institute of Technology — CSE Department — April 2026*
+ — T John Institute of Technology — CSE Department — April 2026*/
