@@ -118,14 +118,12 @@ def analyze(repo_path: Path, base: str, head: str, run_tests: bool, json_out: Pa
             label = sym.name if sym else sym_id
             changed_node = tree.add(f"[red bold]✏️  {label}[/] [dim](changed)[/]")
 
-            # Show direct callers
             callers = result.graph.direct_callers(sym_id)
             for caller_id in sorted(callers):
                 caller_sym = result.graph.get_symbol(caller_id)
                 caller_label = caller_sym.name if caller_sym else caller_id
                 caller_node = changed_node.add(f"[yellow]← {caller_label}[/] [dim](caller)[/]")
 
-                # Show their callers too (one more level)
                 grandcallers = result.graph.direct_callers(caller_id)
                 for gc_id in sorted(grandcallers):
                     gc_sym = result.graph.get_symbol(gc_id)
@@ -135,24 +133,65 @@ def analyze(repo_path: Path, base: str, head: str, run_tests: bool, json_out: Pa
         console.print(tree)
         console.print()
 
-    # ── Test Selection ──
+    # ── Test Selection with Justifications ──
     if impact.selected_tests:
-        test_table = Table(title="🧪 Selected Tests", show_lines=False)
-        test_table.add_column("#", style="dim", width=4)
-        test_table.add_column("Test", style="green")
-        test_table.add_column("File", style="dim", max_width=50)
+        test_table = Table(title="🧪 Selected Tests", show_lines=True)
+        test_table.add_column("#", style="dim", width=3)
+        test_table.add_column("Test", style="green", max_width=45)
+        test_table.add_column("Confidence", justify="center", width=12)
+        test_table.add_column("Method", width=12)
+        test_table.add_column("Justification", style="dim", max_width=60)
+
+        # Build a lookup for scored tests
+        score_lookup: dict[str, tuple[float, str]] = {}
+        for st in result.scored_tests:
+            score_lookup[st.test.id] = (st.confidence, st.match_method)
 
         for i, t in enumerate(impact.selected_tests, 1):
-            test_table.add_row(str(i), t.id, t.file_path)
+            conf, method = score_lookup.get(t.id, (0.0, "unknown"))
+
+            # Color confidence
+            if conf >= 0.85:
+                conf_str = f"[green]{conf:.0%}[/]"
+            elif conf >= 0.65:
+                conf_str = f"[yellow]{conf:.0%}[/]"
+            else:
+                conf_str = f"[red]{conf:.0%}[/]"
+
+            # Method badge
+            method_str = {
+                "direct":     "[green]direct[/]",
+                "convention": "[cyan]convention[/]",
+                "import":     "[yellow]import[/]",
+                "transitive": "[red]transitive[/]",
+            }.get(method, method)
+
+            justification = impact.reasoning.get(t.id, "—")
+            if len(justification) > 80:
+                justification = justification[:77] + "..."
+
+            test_table.add_row(str(i), t.id, conf_str, method_str, justification)
 
         console.print(test_table)
 
-        reduction = (1 - len(impact.selected_tests) / analysis.total_tests) * 100 if analysis.total_tests else 0
+        reduction = (
+            (1 - len(impact.selected_tests) / analysis.total_tests) * 100
+            if analysis.total_tests else 0
+        )
         console.print(
             f"\n  📊 [bold]{len(impact.selected_tests)}[/] of "
             f"[bold]{analysis.total_tests}[/] tests selected "
             f"([green bold]{reduction:.0f}% reduction[/])"
         )
+
+        # Show LLM provider if used
+        from impactlens.ai.llm_client import get_llm_client
+        client = get_llm_client()
+        if client.is_available():
+            console.print(f"  🤖 Justifications powered by [cyan]{client.provider_name}[/]")
+        else:
+            console.print(f"  📝 Justifications generated from call graph templates")
+
         console.print()
     else:
         console.print("[yellow]No tests selected (no impacted test files found).[/]")
@@ -216,15 +255,15 @@ def analyze(repo_path: Path, base: str, head: str, run_tests: bool, json_out: Pa
             "head": head,
             "changed_regions": [r.model_dump(mode="json") for r in analysis.changed_regions],
             "impact": {
-                "changed_symbols": impact.changed_symbols,
+                "changed_symbols":  impact.changed_symbols,
                 "impacted_symbols": impact.impacted_symbols,
-                "impacted_files": impact.impacted_files,
-                "selected_tests": [t.model_dump(mode="json") for t in impact.selected_tests],
+                "impacted_files":   impact.impacted_files,
+                "selected_tests":   [t.model_dump(mode="json") for t in impact.selected_tests],
             },
             "total_symbols": analysis.total_symbols,
-            "total_tests": analysis.total_tests,
-            "test_results": [r.model_dump(mode="json") for r in result.test_results] if result.test_results else [],
-            "timings": result.timings.summary(),
+            "total_tests":   analysis.total_tests,
+            "test_results":  [r.model_dump(mode="json") for r in result.test_results] if result.test_results else [],
+            "timings":       result.timings.summary(),
         }
         json_out.write_text(json.dumps(output, indent=2))
         console.print(f"\n[green]📄 Results written to {json_out}[/]")
