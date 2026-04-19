@@ -1,0 +1,68 @@
+{
+  "repo": "Apache Commons Lang 3.14.0",
+  "base_commit": "9ca1652a",
+  "head_commit": "347f44a0",
+  "analysis_time_seconds": 3.3,
+  "stats": {
+    "total_symbols": 4161,
+    "call_edges": 2064,
+    "total_tests": 4115,
+    "changed_symbols": 12,
+    "impacted_symbols": 22,
+    "selected_tests": 6,
+    "reduction_percent": 99.9
+  },
+  "changed_symbols": [
+    "java:org.apache.commons.lang3.arch.Processor",
+    "java:org.apache.commons.lang3.arch.Processor.Processor",
+    "java:org.apache.commons.lang3.arch.Processor.getArch",
+    "java:org.apache.commons.lang3.arch.Processor.getType",
+    "java:org.apache.commons.lang3.arch.Processor.is32Bit",
+    "java:org.apache.commons.lang3.arch.Processor.is64Bit",
+    "java:org.apache.commons.lang3.arch.Processor.isAarch64",
+    "java:org.apache.commons.lang3.arch.Processor.isIA64",
+    "java:org.apache.commons.lang3.arch.Processor.isPPC",
+    "java:org.apache.commons.lang3.arch.Processor.isRISCV",
+    "java:org.apache.commons.lang3.arch.Processor.isX86",
+    "java:org.apache.commons.lang3.arch.Processor.toString"
+  ],
+  "impacted_files": [
+    "src/main/java/org/apache/commons/lang3/ArchUtils.java",
+    "src/main/java/org/apache/commons/lang3/arch/Processor.java"
+  ],
+  "selected_tests": [
+    {
+      "id": "org.apache.commons.lang3.ArchUtilsTest#testArch",
+      "file": "src/test/java/org/apache/commons/lang3/ArchUtilsTest.java"
+    },
+    {
+      "id": "org.apache.commons.lang3.ArchUtilsTest#testArchLabels",
+      "file": "src/test/java/org/apache/commons/lang3/ArchUtilsTest.java"
+    },
+    {
+      "id": "org.apache.commons.lang3.ArchUtilsTest#testGetProcessor",
+      "file": "src/test/java/org/apache/commons/lang3/ArchUtilsTest.java"
+    },
+    {
+      "id": "org.apache.commons.lang3.ArchUtilsTest#testIs32BitJVM",
+      "file": "src/test/java/org/apache/commons/lang3/ArchUtilsTest.java"
+    },
+    {
+      "id": "org.apache.commons.lang3.ArchUtilsTest#testIs64BitJVM",
+      "file": "src/test/java/org/apache/commons/lang3/ArchUtilsTest.java"
+    },
+    {
+      "id": "org.apache.commons.lang3.ArchUtilsTest#testTypeLabels",
+      "file": "src/test/java/org/apache/commons/lang3/ArchUtilsTest.java"
+    }
+  ],
+  "timings": {
+    "diff": "311ms",
+    "parse": "1998ms",
+    "graph": "803ms",
+    "impact": "0ms",
+    "mapping": "158ms",
+    "test_run": "0ms",
+    "total": "3269ms"
+  }
+}
