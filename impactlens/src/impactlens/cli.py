@@ -33,6 +33,12 @@ def _setup_logging(verbose: bool) -> None:
 @click.pass_context
 def main(ctx: click.Context, verbose: bool) -> None:
     """ImpactLens — impact analysis and selective test execution."""
+    # Load .env file if present
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
     _setup_logging(verbose)
     register_all_adapters()
     ctx.ensure_object(dict)

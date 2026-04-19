@@ -35,21 +35,6 @@ class LLMClient:
 
     def _initialize(self) -> None:
         """Try to initialize a provider in order of preference."""
-        # Try Anthropic first
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if api_key:
-            try:
-                import anthropic
-                self._client = anthropic.Anthropic(api_key=api_key)
-                self._provider = "anthropic"
-                self._model = "claude-sonnet-4-20250514"
-                log.info("LLM: Anthropic Claude initialized")
-                return
-            except ImportError:
-                log.debug("anthropic package not installed")
-            except Exception as e:
-                log.warning("Anthropic init failed: %s", e)
-
         # Try OpenAI
         api_key = os.environ.get("OPENAI_API_KEY")
         if api_key:
@@ -64,6 +49,20 @@ class LLMClient:
                 log.debug("openai package not installed")
             except Exception as e:
                 log.warning("OpenAI init failed: %s", e)
+        
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if api_key:
+            try:
+                import anthropic
+                self._client = anthropic.Anthropic(api_key=api_key)
+                self._provider = "anthropic"
+                self._model = "claude-sonnet-4-20250514"
+                log.info("LLM: Anthropic Claude initialized")
+                return
+            except ImportError:
+                log.debug("anthropic package not installed")
+            except Exception as e:
+                log.warning("Anthropic init failed: %s", e)
 
         # Try Groq
         api_key = os.environ.get("GROQ_API_KEY")

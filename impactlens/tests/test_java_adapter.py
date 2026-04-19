@@ -7,7 +7,7 @@ import pytest
 
 from impactlens.adapters.java.parser import JavaParser, ParseResult
 from impactlens.adapters.java.adapter import JavaAdapter
-from impactlens.core.models import Language, SymbolKind
+from impactlens.core.models import Language, SymbolKind, TestFramework
 from impactlens.graph.call_graph import CallGraph
 
 

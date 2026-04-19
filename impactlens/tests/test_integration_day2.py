@@ -32,7 +32,7 @@ def adapter() -> JavaAdapter:
 class TestDay2Integration:
     def test_diff_finds_changes(self, sample_root: Path):
         """Diff between commits 1 and 2 should find PriceFormatter change."""
-        regions = extract_changed_regions(sample_root, "HEAD~3", "HEAD~2")
+        regions = extract_changed_regions(sample_root, "HEAD~4", "HEAD~3")
         files = {r.file_path for r in regions}
         # Should find PriceFormatter.java modified
         pf_regions = [r for r in regions if "PriceFormatter" in r.file_path]
@@ -76,7 +76,7 @@ class TestDay2Integration:
 
     def test_changed_symbols_can_be_attributed(self, adapter: JavaAdapter, sample_root: Path):
         """Changed line ranges should map to specific symbols."""
-        regions = extract_changed_regions(sample_root, "HEAD~3", "HEAD~2")
+        regions = extract_changed_regions(sample_root, "HEAD~4", "HEAD~3")
 
         # Parse PriceFormatter to get its symbols
         pf_path = sample_root / "src/main/java/com/impactlens/demo/util/PriceFormatter.java"
