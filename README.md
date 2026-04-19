@@ -116,7 +116,7 @@ impactlens --help
 - [x] 💻 CLI `analyze` command now runs real diff extraction + symbol parsing with Rich table output
 - [x] 📦 Sample repo enhanced — 5-commit history with scripted setup (`scripts/setup_sample_repo.sh`)
 - [x] 🧪 15+ tests covering parser, adapter, diff extractor, and full integration pipeline
-```bash
+
 ### ✅ Day 3 — Impact Analysis & Test Execution _(Fri, April 18)_
 
 - [x] 💥 Reverse-BFS impact analyzer with class expansion and 7 unit tests
@@ -126,7 +126,7 @@ impactlens --help
 - [x] 💻 CLI complete — blast radius tree, test selection table, timing panel
 - [x] 🔗 End-to-end pipeline integration tests with 6 scenarios
 - [x] 📊 3 demo scenarios verified (leaf change, mid-level ripple, new file)
-*analyze*
+##analyze
 | `impactlens analyze <path> --base <ref> --head <ref>` | ✅ | Full pipeline: diff → parse → graph → impact → test selection |
 | `impactlens analyze ... --run-tests` | ✅ | Execute selected JUnit tests via Maven Surefire |
 | `impactlens analyze ... --json-out <file>` | ✅ | Export full analysis results as JSON |
