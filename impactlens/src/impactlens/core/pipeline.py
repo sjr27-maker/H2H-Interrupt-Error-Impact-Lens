@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from impactlens.analysis.impact import compute_impact
+from impactlens.ai.confidence import ScoredTest
 from impactlens.core.adapter import LanguageAdapter
 from impactlens.core.diff import extract_changed_regions
 from impactlens.core.models import (
@@ -65,6 +66,7 @@ class PipelineResult:
     timings: PipelineTimings
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    scored_tests: list[ScoredTest] = field(default_factory=list)  # ← merged from duplicate
 
 
 def run_analysis(
@@ -95,8 +97,10 @@ def run_analysis(
     t0 = time.time()
     regions = extract_changed_regions(repo_path, base, head)
     timings.diff_ms = (time.time() - t0) * 1000
-    log.info("  Found %d changed regions across %d files",
-             len(regions), len(set(r.file_path for r in regions)))
+    log.info(
+        "  Found %d changed regions across %d files",
+        len(regions), len(set(r.file_path for r in regions)),
+    )
 
     if not regions:
         warnings.append("No changes detected between refs.")
@@ -113,9 +117,6 @@ def run_analysis(
     all_symbols: list[SourceSymbol] = []
     all_tests: list[TestCase] = []
     parse_errors: list[str] = []
-
-    # Determine which adapter handles this repo
-    # For now, use all adapters and let each discover its own files
     active_adapter: LanguageAdapter | None = None
 
     for adapter in adapters:
@@ -126,10 +127,11 @@ def run_analysis(
             continue
 
         active_adapter = adapter
-        log.info("  [%s] %d source files, %d test files",
-                 adapter.language.value, len(source_files), len(test_files))
+        log.info(
+            "  [%s] %d source files, %d test files",
+            adapter.language.value, len(source_files), len(test_files),
+        )
 
-        # Parse all source files
         for sf in source_files:
             try:
                 symbols = adapter.parse_file(sf, repo_path)
@@ -139,7 +141,6 @@ def run_analysis(
                 parse_errors.append(msg)
                 log.warning("  ⚠ %s", msg)
 
-        # Extract tests
         for tf in test_files:
             try:
                 tests = adapter.extract_tests(tf, repo_path)
@@ -157,14 +158,20 @@ def run_analysis(
 
     if not active_adapter:
         errors.append("No adapter found source files in this repository.")
-        # Return a minimal result
         return PipelineResult(
             analysis=AnalysisRun(
-                repo_path=str(repo_path), base_commit=base, head_commit=head,
+                repo_path=str(repo_path),
+                base_commit=base,
+                head_commit=head,
                 changed_regions=regions,
-                impact=ImpactResult(changed_symbols=[], impacted_symbols=[],
-                                    impacted_files=[], selected_tests=[]),
-                total_symbols=0, total_tests=0,
+                impact=ImpactResult(
+                    changed_symbols=[],
+                    impacted_symbols=[],
+                    impacted_files=[],
+                    selected_tests=[],
+                ),
+                total_symbols=0,
+                total_tests=0,
             ),
             graph=CallGraph(),
             all_tests=[],
@@ -178,8 +185,8 @@ def run_analysis(
     log.info("Step 3/5: Building call graph...")
     t0 = time.time()
 
-    graph = CallGraph()
-    graph.add_symbols(all_symbols)
+    call_graph = CallGraph()
+    call_graph.add_symbols(all_symbols)
 
     known = {s.id: s for s in all_symbols}
     all_edges: list[CallEdge] = []
@@ -193,23 +200,26 @@ def run_analysis(
             except Exception as e:
                 log.warning("  ⚠ Call extraction error in %s: %s", sf.name, e)
 
-    graph.add_calls(all_edges)
+    call_graph.add_calls(all_edges)
     timings.graph_ms = (time.time() - t0) * 1000
 
-    summary = graph.summary()
-    log.info("  Graph: %d nodes, %d edges, %d files",
-             summary["nodes"], summary["edges"], summary["files"])
+    summary = call_graph.summary()
+    log.info(
+        "  Graph: %d nodes, %d edges, %d files",
+        summary["nodes"], summary["edges"], summary["files"],
+    )
 
     # ── Step 4: Compute impact ──
     log.info("Step 4/5: Computing impact...")
     t0 = time.time()
 
-    impact = compute_impact(graph, regions, active_adapter)
+    impact = compute_impact(call_graph, regions, active_adapter)
 
     timings.impact_ms = (time.time() - t0) * 1000
-    log.info("  Changed: %d symbols, Impacted: %d symbols, Files: %d",
-             len(impact.changed_symbols), len(impact.impacted_symbols),
-             len(impact.impacted_files))
+    log.info(
+        "  Changed: %d symbols, Impacted: %d symbols, Files: %d",
+        len(impact.changed_symbols), len(impact.impacted_symbols), len(impact.impacted_files),
+    )
 
     # ── Step 5: Map to tests ──
     log.info("Step 5/5: Mapping to tests...")
@@ -218,10 +228,35 @@ def run_analysis(
     selected_tests = map_tests(impact, all_tests)
     impact.selected_tests = selected_tests
 
+    # ── Step 5b: Generate justifications and confidence scores ──
+    log.info("Generating justifications and confidence scores...")
+    scored: list[ScoredTest] = []
+    try:
+        from impactlens.ai.justifier import generate_justifications
+        from impactlens.ai.confidence import score_tests
+
+        justifications = generate_justifications(impact, call_graph)
+        impact.reasoning = justifications
+
+        scored = score_tests(impact, call_graph)
+        for s in scored:
+            key = f"_confidence:{s.test.id}"
+            impact.reasoning[key] = f"{s.confidence}|{s.match_method}|{s.chain_depth}"
+
+        log.info(
+            "  Generated %d justifications, %d confidence scores",
+            len(justifications), len(scored),
+        )
+    except Exception as e:
+        log.warning("AI augmentation failed (non-fatal): %s", e)
+
     timings.mapping_ms = (time.time() - t0) * 1000
-    log.info("  Selected %d of %d tests (%.0f%% reduction)",
-             len(selected_tests), len(all_tests),
-             (1 - len(selected_tests) / len(all_tests)) * 100 if all_tests else 0)
+    log.info(
+        "  Selected %d of %d tests (%.0f%% reduction)",
+        len(selected_tests),
+        len(all_tests),
+        (1 - len(selected_tests) / len(all_tests)) * 100 if all_tests else 0,
+    )
 
     # ── Optional: Run tests ──
     test_results: list[TestResult] = []
@@ -236,8 +271,10 @@ def run_analysis(
             timings.test_run_ms = (time.time() - t0) * 1000
             passed = sum(1 for r in test_results if r.status.value == "passed")
             failed = sum(1 for r in test_results if r.status.value == "failed")
-            log.info("  Results: %d passed, %d failed, %.1fs",
-                     passed, failed, timings.test_run_ms / 1000)
+            log.info(
+                "  Results: %d passed, %d failed, %.1fs",
+                passed, failed, timings.test_run_ms / 1000,
+            )
         except Exception as e:
             msg = f"Test execution failed: {e}"
             errors.append(msg)
@@ -247,7 +284,7 @@ def run_analysis(
     # ── Build final result ──
     timings.total_ms = (time.time() - pipeline_start) * 1000
 
-    analysis = AnalysisRun(
+    analysis_run = AnalysisRun(
         repo_path=str(repo_path),
         base_commit=base,
         head_commit=head,
@@ -258,11 +295,12 @@ def run_analysis(
     )
 
     return PipelineResult(
-        analysis=analysis,
-        graph=graph,
+        analysis=analysis_run,
+        graph=call_graph,
         all_tests=all_tests,
         test_results=test_results,
         timings=timings,
         errors=errors,
         warnings=warnings,
+        scored_tests=scored,  # ← now always present, empty list if AI step failed
     )
