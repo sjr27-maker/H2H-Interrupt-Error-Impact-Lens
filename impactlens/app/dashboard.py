@@ -160,6 +160,20 @@ with st.sidebar:
     repo_path = repos[repo_name]
 
     st.divider()
+    st.markdown("**Pre-computed analyses**")
+    from app.precomputed import get_precomputed_results, render_precomputed
+
+    precomputed = get_precomputed_results()
+    if precomputed:
+        precomputed_name = st.selectbox(
+            "View cached analysis",
+            options=["(none)"] + list(precomputed.keys()),
+            label_visibility="collapsed",
+        )
+        if precomputed_name != "(none)":
+            st.session_state["show_precomputed"] = precomputed_name
+    else:
+        st.caption("No pre-computed results available.")
 
     # Commit selection
     commits = get_commits(repo_path)
@@ -251,6 +265,14 @@ if analyze_clicked or quick_demo:
         except Exception as e:
             st.error(f"Analysis failed: {e}")
             st.stop()
+
+# Show pre-computed results if selected
+if st.session_state.get("show_precomputed"):
+    name = st.session_state["show_precomputed"]
+    precomputed = get_precomputed_results()
+    if name in precomputed:
+        render_precomputed(precomputed[name])
+        st.divider()
 
 # Display results if available
 if "result" in st.session_state:
