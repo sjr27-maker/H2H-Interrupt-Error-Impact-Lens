@@ -438,6 +438,43 @@ if "result" in st.session_state:
                 "Count": [selected, skipped],
             })
             st.bar_chart(reduction_data.set_index("Category"))
+        # Export button
+        st.divider()
+        st.markdown("### Export Results")
+
+        export_data = {
+            "repo": str(repo_path),
+            "base": base_ref,
+            "head": head_ref,
+            "stats": {
+                "total_symbols": analysis.total_symbols,
+                "call_edges": result.graph.edge_count,
+                "total_tests": analysis.total_tests,
+                "changed_symbols": len(impact.changed_symbols),
+                "impacted_symbols": len(impact.impacted_symbols),
+                "selected_tests": len(impact.selected_tests),
+            },
+            "changed_symbols": impact.changed_symbols,
+            "impacted_files": impact.impacted_files,
+            "selected_tests": [
+                {
+                    "id": t.id,
+                    "file": t.file_path,
+                    "confidence": score_lookup.get(t.id, (0, "unknown"))[0],
+                    "method": score_lookup.get(t.id, (0, "unknown"))[1],
+                    "justification": impact.reasoning.get(t.id, ""),
+                }
+                for t in impact.selected_tests
+            ],
+            "timings": result.timings.summary(),
+        }
+
+        st.download_button(
+            label="Download results as JSON",
+            data=json.dumps(export_data, indent=2),
+            file_name="impactlens_results.json",
+            mime="application/json",
+        )
 
 else:
     # Landing page
