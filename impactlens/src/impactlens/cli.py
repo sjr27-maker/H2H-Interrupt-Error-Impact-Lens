@@ -277,5 +277,34 @@ def analyze(repo_path: Path, base: str, head: str, run_tests: bool, json_out: Pa
     console.print()
 
 
+# ── NEW: Dashboard command ──────────────────────────────────────────────────
+
+@main.command()
+def dashboard() -> None:
+    """Launch the Streamlit web dashboard."""
+    import subprocess
+
+    app_path = Path(__file__).parent.parent.parent / "app" / "dashboard.py"
+    if not app_path.exists():
+        console.print(f"[red]Dashboard app not found at {app_path}[/]")
+        console.print("[dim]Make sure app/dashboard.py exists in the project root.[/]")
+        sys.exit(1)
+
+    console.print(Panel(
+        f"[bold]App:[/] [cyan]{app_path}[/]\n"
+        f"[bold]URL:[/] [green]http://localhost:8501[/]",
+        title="🎯 Launching ImpactLens Dashboard",
+        border_style="green",
+    ))
+    console.print("[dim]Press Ctrl+C to stop the server.[/]\n")
+
+    subprocess.run([
+        sys.executable, "-m", "streamlit", "run",
+        str(app_path),
+        "--server.headless", "true",
+        "--browser.gatherUsageStats", "false",
+    ])
+
+
 if __name__ == "__main__":
     main()
