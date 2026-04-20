@@ -27,8 +27,12 @@ ai = [
     "openai>=1.50.0",
     "groq>=0.11.0",
 ]
+dashboard = [
+    "streamlit>=1.38.0",
+    "pyvis>=0.3.2",
+]
 all = [
-    "impactlens[dev,ai]",
+    "impactlens[dev,ai,dashboard]",
 ]
 
 [project.scripts]
@@ -44,4 +48,3 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-
