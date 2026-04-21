@@ -212,7 +212,7 @@ Apache Commons Lang — 4161 symbols, 2064 call edges, 4115 tests parsed.
 
 **Initial diff detection on sample repo:**
 
-<img src="impactlens/docs/images/inital-test-diff_detection.png" width="700" alt="Initial diff detection test"/>
+<img src="impactlens/docs/images/Inital-test-diff_detection.png" width="700" alt="Initial diff detection test"/>
 
 **Full pipeline output with multiple tests:**
 
@@ -227,6 +227,16 @@ Apache Commons Lang — 4161 symbols, 2064 call edges, 4115 tests parsed.
 <img src="impactlens/docs/images/realcodebase_test_output.png" width="700" alt="Real codebase test output"/>
 
 <img src="impactlens/docs/images/realcodebase_test_output2.png" width="700" alt="Real codebase test output continued"/>
+
+**Demo Screenshots:**
+
+<img src="impactlens/docs/images/Call_graph.png" width="700" alt="Real codebase test output"/>
+
+<img src="impactlens/docs/images/pipeline_performance.png" width="700" alt="Real codebase test output"/>
+
+<img src="impactlens/docs/images/reduction_of_tests.png" width="700" alt="Real codebase test output"/>
+
+<img src="impactlens/docs/images/selected_tests.png" width="700" alt="Real codebase test output continued"/>
 
 ---
 
