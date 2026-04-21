@@ -24,6 +24,13 @@ try:
 except ImportError:
     pass
 
+# Ensure sample repos are set up (needed for cloud deployment)
+try:
+    from setup_for_cloud import ensure_sample_repo
+    ensure_sample_repo()
+except Exception:
+    pass  # Non-fatal — pre-computed results still work
+
 from impactlens.core.registry import register_all_adapters
 
 # Register adapters once
@@ -148,8 +155,16 @@ with st.sidebar:
     # Repo selection
     repos = get_sample_repos()
 
+    # ── CHANGED (Day 6): graceful fallback when no repos available ──
     if not repos:
-        st.warning("No sample repos found. Run `scripts/setup_sample_repo.sh`")
+        st.info("No live repositories available. Showing pre-computed analyses only.")
+        from precomputed import get_precomputed_results, render_precomputed
+        precomputed = get_precomputed_results()
+        if precomputed:
+            for name, data in precomputed.items():
+                render_precomputed(data)
+        else:
+            st.warning("No pre-computed results found either.")
         st.stop()
 
     repo_name = st.selectbox(
@@ -447,6 +462,7 @@ if "result" in st.session_state:
                 "Count": [selected, skipped],
             })
             st.bar_chart(reduction_data.set_index("Category"))
+
         # Export button
         st.divider()
         st.markdown("### Export Results")
