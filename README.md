@@ -298,6 +298,17 @@ Pydantic model validation, git diff extraction with line ranges, Tree-sitter Jav
 - [x] Optional AI dependencies in pyproject.toml with .env.example
 - [x] Auto-loading of .env for API keys via python-dotenv
 
+### Day 5 — Web Dashboard (Sun, April 20)
+
+- [x] Streamlit dashboard with sidebar repo/commit picker and quick-demo buttons
+- [x] Interactive pyvis call graph with color-coded blast radius
+- [x] Test selection panel with confidence scores and LLM justifications
+- [x] Pipeline timing breakdown with bar charts
+- [x] Test reduction visualization
+- [x] Pre-computed results mode for large codebases
+- [x] JSON export download button
+- [x] Dashboard CLI command (`impactlens dashboard`)
+- [x] Dashboard screenshots for README
 
 ## Team Members
 
