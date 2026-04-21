@@ -161,7 +161,7 @@ with st.sidebar:
 
     st.divider()
     st.markdown("**Pre-computed analyses**")
-    from app.precomputed import get_precomputed_results, render_precomputed
+    from precomputed import get_precomputed_results, render_precomputed
 
     precomputed = get_precomputed_results()
     if precomputed:
@@ -314,7 +314,7 @@ if "result" in st.session_state:
         st.markdown("### Interactive Call Graph")
         st.markdown("Red = changed, Orange = impacted, Green = safe. Hover for details.")
 
-        from app.graph_viz import render_call_graph
+        from graph_viz import render_call_graph
         render_call_graph(result.graph, impact)
 
     # ── TAB 2: Selected Tests ──
@@ -327,24 +327,33 @@ if "result" in st.session_state:
             st.markdown(f"**{test_count}** of **{total}** tests selected "
                         f"(**{(1 - test_count/total)*100:.0f}%** reduction)")
 
+            # Pagination for large results
+            PAGE_SIZE = 20
+            total_pages = (test_count + PAGE_SIZE - 1) // PAGE_SIZE
+
+            if total_pages > 1:
+                page = st.number_input(
+                    "Page", min_value=1, max_value=total_pages,
+                    value=1, step=1
+                )
+                start = (page - 1) * PAGE_SIZE
+                end = min(start + PAGE_SIZE, test_count)
+                st.caption(f"Showing tests {start+1}–{end} of {test_count}")
+            else:
+                start = 0
+                end = test_count
+
             # Build score lookup
             score_lookup = {}
             for st_item in result.scored_tests:
                 score_lookup[st_item.test.id] = (st_item.confidence, st_item.match_method)
 
-            for i, t in enumerate(impact.selected_tests):
+            for i, t in enumerate(impact.selected_tests[start:end], start + 1):
                 conf, method = score_lookup.get(t.id, (0.0, "unknown"))
                 justification = impact.reasoning.get(t.id, "No justification available")
+                preview = justification[:80] + "..." if len(justification) > 80 else justification
 
-                # Color for confidence
-                if conf >= 0.85:
-                    conf_color = "confidence-high"
-                elif conf >= 0.65:
-                    conf_color = "confidence-mid"
-                else:
-                    conf_color = "confidence-low"
-
-                with st.expander(f"**{i+1}. {t.id}**  —  {conf:.0%} confidence"):
+                with st.expander(f"**{i}. {t.id}** — {conf:.0%} confidence\n\n_{preview}_"):
                     col_a, col_b = st.columns([1, 3])
                     with col_a:
                         st.markdown(f"**Confidence:** `{conf:.0%}`")
