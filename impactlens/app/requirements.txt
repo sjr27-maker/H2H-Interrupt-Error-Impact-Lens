@@ -1,0 +1,11 @@
+streamlit>=1.38.0
+pyvis>=0.3.2
+pydantic>=2.5.0
+click>=8.1.0
+gitpython>=3.1.40
+networkx>=3.2
+tree-sitter>=0.21.0
+tree-sitter-java>=0.21.0
+rich>=13.7.0
+python-dotenv>=1.0.0
+openai>=1.50.0
