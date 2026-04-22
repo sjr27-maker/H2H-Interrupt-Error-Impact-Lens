@@ -320,6 +320,18 @@ Pydantic model validation, git diff extraction with line ranges, Tree-sitter Jav
 - [x] Dashboard CLI command (`impactlens dashboard`)
 - [x] Dashboard screenshots for README
 
+### Day 6 — Web Dashboard (Mon, April 21)
+
+- [x] Streamlit Community Cloud deployment — public live URL
+- [x] One-click "Analyze Sample Repo" mode for instant demos
+- [x] Benchmark report — accuracy and time-saved metrics
+
+### Day 7 — Project UI redesigning (Tue, April 22)
+
+ - [x] README polish
+ - [x] Complete architecture section with diagrams
+ - [x] Setup instructions verified against a fresh clone
+ 
 ## Team Members
 
 | Name | Role | Responsibilities | GitHub |
