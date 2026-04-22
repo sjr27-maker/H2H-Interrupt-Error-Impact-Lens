@@ -13,6 +13,51 @@ from pathlib import Path
 
 import streamlit as st
 
+import tempfile
+import shutil
+
+# Directory for cloned repos (persists during the Streamlit session)
+CLONE_DIR = Path(tempfile.gettempdir()) / "impactlens_clones"
+CLONE_DIR.mkdir(exist_ok=True)
+
+
+def clone_repo(url: str) -> Path | None:
+    """Clone a git repo from URL into a temp directory."""
+    import subprocess
+    import hashlib
+
+    # Create a unique folder name from the URL
+    repo_name = url.rstrip("/").split("/")[-1].replace(".git", "")
+    folder_name = f"{repo_name}_{hashlib.md5(url.encode()).hexdigest()[:8]}"
+    dest = CLONE_DIR / folder_name
+
+    # If already cloned, reuse
+    if (dest / ".git").exists():
+        return dest
+
+    # Clean up if partial clone exists
+    if dest.exists():
+        shutil.rmtree(dest)
+
+    try:
+        result = subprocess.run(
+            ["git", "clone", "--depth", "50", url, str(dest)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode == 0 and (dest / ".git").exists():
+            return dest
+        else:
+            st.error(f"Git clone error: {result.stderr[:300]}")
+            return None
+    except subprocess.TimeoutExpired:
+        st.error("Clone timed out after 60 seconds. Try a smaller repo.")
+        return None
+    except Exception as e:
+        st.error(f"Clone failed: {e}")
+        return None
+
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
@@ -23,13 +68,6 @@ try:
     load_dotenv(project_root / ".env")
 except ImportError:
     pass
-
-# Ensure sample repos are set up (needed for cloud deployment)
-try:
-    from setup_for_cloud import ensure_sample_repo
-    ensure_sample_repo()
-except Exception:
-    pass  # Non-fatal — pre-computed results still work
 
 from impactlens.core.registry import register_all_adapters
 
@@ -107,15 +145,24 @@ st.markdown("""
 
 
 def get_sample_repos() -> dict[str, Path]:
-    """Discover available sample repositories."""
+    """Discover available sample repositories and any cloned repos."""
     repos = {}
     sample_dir = project_root / "sample_repos"
-    if not sample_dir.exists():
-        return repos
+    if sample_dir.exists():
+        for child in sorted(sample_dir.iterdir()):
+            if child.is_dir() and (child / ".git").exists():
+                repos[child.name] = child
 
-    for child in sorted(sample_dir.iterdir()):
-        if child.is_dir() and (child / ".git").exists():
-            repos[child.name] = child
+    # Add any custom cloned repos
+    if CLONE_DIR.exists():
+        for child in sorted(CLONE_DIR.iterdir()):
+            if child.is_dir() and (child / ".git").exists():
+                repos[f"{child.name} (cloned)"] = child
+
+    # Add custom repo from session state
+    custom = st.session_state.get("custom_repo")
+    if custom and custom.exists():
+        repos[f"{custom.name} (cloned)"] = custom
 
     return repos
 
@@ -152,25 +199,40 @@ with st.sidebar:
     st.markdown("*Change anything. Test only what matters.*")
     st.divider()
 
+    # ── Git URL Input ──
+    st.markdown("**Analyze any Java repo**")
+    git_url = st.text_input(
+        "Paste a GitHub URL",
+        placeholder="https://github.com/user/repo.git",
+        label_visibility="collapsed",
+    )
+
+    if git_url and st.button("Clone & Analyze", use_container_width=True):
+        with st.spinner("Cloning repository..."):
+            cloned_path = clone_repo(git_url)
+            if cloned_path:
+                st.session_state["custom_repo"] = cloned_path
+                st.success(f"Cloned to {cloned_path.name}")
+                st.rerun()
+            else:
+                st.error("Failed to clone repository.")
+
+    st.divider()
+
     # Repo selection
     repos = get_sample_repos()
 
-    # ── CHANGED (Day 6): graceful fallback when no repos available ──
     if not repos:
-        st.info("No live repositories available. Showing pre-computed analyses only.")
-        from precomputed import get_precomputed_results, render_precomputed
-        precomputed = get_precomputed_results()
-        if precomputed:
-            for name, data in precomputed.items():
-                render_precomputed(data)
-        else:
-            st.warning("No pre-computed results found either.")
+        st.warning("No sample repos found. Run `scripts/setup_sample_repo.sh`")
         st.stop()
 
     repo_name = st.selectbox(
         "Repository",
         options=list(repos.keys()),
-        format_func=lambda x: f"{x} ({'demo' if 'demo' in x else 'real-world'})",
+        format_func=lambda x: (
+            f"{x}" if "cloned" in x
+            else f"{x} ({'demo' if 'demo' in x else 'real-world'})"
+        ),
     )
     repo_path = repos[repo_name]
 
@@ -462,7 +524,6 @@ if "result" in st.session_state:
                 "Count": [selected, skipped],
             })
             st.bar_chart(reduction_data.set_index("Category"))
-
         # Export button
         st.divider()
         st.markdown("### Export Results")
