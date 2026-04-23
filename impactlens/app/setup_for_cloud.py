@@ -1,121 +1,93 @@
 """
-Setup script for Streamlit Cloud deployment.
-Creates git history in sample repos that were deployed as flat files.
+Setup for Streamlit Cloud — creates git history in sample repos using pure Python.
+No bash required. Runs automatically on app startup.
 """
 from __future__ import annotations
 
 import subprocess
+import os
 from pathlib import Path
 
 
-def ensure_sample_repo():
-    """Create git history in java_demo if it doesn't have any."""
+def _git(sample_dir: Path, *args):
+    """Run a git command in the sample directory."""
+    env = os.environ.copy()
+    env["GIT_AUTHOR_NAME"] = "ImpactLens Demo"
+    env["GIT_AUTHOR_EMAIL"] = "demo@impactlens.dev"
+    env["GIT_COMMITTER_NAME"] = "ImpactLens Demo"
+    env["GIT_COMMITTER_EMAIL"] = "demo@impactlens.dev"
+    
+    result = subprocess.run(
+        ["git"] + list(args),
+        cwd=str(sample_dir),
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=15,
+    )
+    return result.returncode == 0
+
+
+def ensure_sample_repo() -> bool:
+    """Create git history in java_demo. Returns True if successful."""
     project_root = Path(__file__).parent.parent
     sample_dir = project_root / "sample_repos" / "java_demo"
 
     if not sample_dir.exists():
         return False
 
+    # Already has valid git history
     if (sample_dir / ".git").exists():
-        # Check if it actually has commits
-        try:
-            result = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                cwd=str(sample_dir),
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode == 0:
-                return True
-        except Exception:
-            pass
-
-    # Try running the setup script
-    setup_script = project_root / "scripts" / "setup_sample_repo.sh"
-    if setup_script.exists():
-        try:
-            subprocess.run(
-                ["bash", str(setup_script)],
-                cwd=str(project_root),
-                capture_output=True,
-                timeout=30,
-            )
-            return (sample_dir / ".git").exists()
-        except Exception:
-            pass
-
-    # Manual fallback — create commits directly with Python
-    try:
-        _create_history_manually(sample_dir)
-        return True
-    except Exception as e:
-        print(f"Manual git setup failed: {e}")
-        return False
-
-
-def _create_history_manually(sample_dir: Path):
-    """Create git history using subprocess calls."""
-    import os
-
-    env = os.environ.copy()
-    env["GIT_AUTHOR_NAME"] = "Demo"
-    env["GIT_AUTHOR_EMAIL"] = "demo@demo.com"
-    env["GIT_COMMITTER_NAME"] = "Demo"
-    env["GIT_COMMITTER_EMAIL"] = "demo@demo.com"
-
-    def git(*args):
-        subprocess.run(
-            ["git"] + list(args),
+        check = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
             cwd=str(sample_dir),
-            capture_output=True,
-            env=env,
-            timeout=10,
+            capture_output=True, text=True,
         )
+        if check.returncode == 0:
+            return True
+        # Broken .git — remove it
+        import shutil
+        shutil.rmtree(sample_dir / ".git", ignore_errors=True)
 
-    # Remove old .git if broken
-    import shutil
-    git_dir = sample_dir / ".git"
-    if git_dir.exists():
-        shutil.rmtree(git_dir)
+    # Create git history
+    _git(sample_dir, "init")
+    _git(sample_dir, "checkout", "-b", "main")
 
-    git("init")
-    git("checkout", "-b", "main")
+    # Commit 1: Initial
+    _git(sample_dir, "add", ".")
+    _git(sample_dir, "commit", "-m", "Initial commit - full project with layered dependencies")
 
-    # Commit 1: everything
-    git("add", ".")
-    git("commit", "-m", "Initial commit — full project with layered dependencies")
-
-    # Read and modify PriceFormatter for commit 2
+    # Commit 2: Modify PriceFormatter
     pf = sample_dir / "src" / "main" / "java" / "com" / "impactlens" / "demo" / "util" / "PriceFormatter.java"
     if pf.exists():
-        content = pf.read_text()
-        modified = content.replace(
+        content = pf.read_text(encoding="utf-8")
+        new_content = content.replace(
             'return String.format("$%.2f", amount);',
-            'if (amount < 0) {\n'
-            '            return "-" + String.format("$%.2f", Math.abs(amount));\n'
-            '        }\n'
-            '        return String.format("$%.2f", amount);'
+            'if (amount < 0) {\n            return "-" + String.format("$%.2f", Math.abs(amount));\n        }\n        return String.format("$%.2f", amount);'
         )
-        pf.write_text(modified)
-        git("add", "-A")
-        git("commit", "-m", "Add negative amount handling to PriceFormatter.format()")
+        if new_content != content:
+            pf.write_text(new_content, encoding="utf-8")
+            _git(sample_dir, "add", "-A")
+            _git(sample_dir, "commit", "-m", "Add negative amount handling to PriceFormatter.format()")
 
-    # Modify DiscountCalculator for commit 3
+    # Commit 3: Modify DiscountCalculator
     dc = sample_dir / "src" / "main" / "java" / "com" / "impactlens" / "demo" / "pricing" / "DiscountCalculator.java"
     if dc.exists():
-        content = dc.read_text()
-        modified = content.replace(
+        content = dc.read_text(encoding="utf-8")
+        new_content = content.replace(
             'return 0.0;\n    }',
             'if ("vip".equals(tier)) return subtotal * 0.30;\n        return 0.0;\n    }'
         )
-        dc.write_text(modified)
-        git("add", "-A")
-        git("commit", "-m", "Add VIP tier to DiscountCalculator")
+        if new_content != content:
+            dc.write_text(new_content, encoding="utf-8")
+            _git(sample_dir, "add", "-A")
+            _git(sample_dir, "commit", "-m", "Add VIP tier and guard against negative subtotals")
 
-    # Add CurrencyConverter for commit 4
+    # Commit 4: Add CurrencyConverter
     util_dir = sample_dir / "src" / "main" / "java" / "com" / "impactlens" / "demo" / "util"
     cc = util_dir / "CurrencyConverter.java"
-    cc.write_text('''package com.impactlens.demo.util;
+    if not cc.exists():
+        cc.write_text('''package com.impactlens.demo.util;
 
 import java.util.Map;
 
@@ -129,12 +101,11 @@ public class CurrencyConverter {
         return inUsd * RATES.getOrDefault(to, 1.0);
     }
 }
-''')
-
-    test_dir = sample_dir / "src" / "test" / "java" / "com" / "impactlens" / "demo" / "util"
-    test_dir.mkdir(parents=True, exist_ok=True)
-    cct = test_dir / "CurrencyConverterTest.java"
-    cct.write_text('''package com.impactlens.demo.util;
+''', encoding="utf-8")
+        test_dir = sample_dir / "src" / "test" / "java" / "com" / "impactlens" / "demo" / "util"
+        test_dir.mkdir(parents=True, exist_ok=True)
+        cct = test_dir / "CurrencyConverterTest.java"
+        cct.write_text('''package com.impactlens.demo.util;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -152,18 +123,36 @@ public class CurrencyConverterTest {
         assertEquals(100.0, c.convert(100.0, "USD", "USD"), 0.001);
     }
 }
-''')
-    git("add", "-A")
-    git("commit", "-m", "Add CurrencyConverter utility")
+''', encoding="utf-8")
+        _git(sample_dir, "add", "-A")
+        _git(sample_dir, "commit", "-m", "Add CurrencyConverter utility with exchange rate support")
 
     # Commit 5: Modify TaxCalculator
     tc = sample_dir / "src" / "main" / "java" / "com" / "impactlens" / "demo" / "pricing" / "TaxCalculator.java"
     if tc.exists():
-        content = tc.read_text()
-        modified = content.replace(
-            'return amount * TAX_RATE;',
-            'if (amount < 0) return 0.0;\n        return amount * TAX_RATE;'
-        )
-        tc.write_text(modified)
-        git("add", "-A")
-        git("commit", "-m", "Add guard to TaxCalculator")
+        content = tc.read_text(encoding="utf-8")
+        if "amount < 0" not in content:
+            new_content = content.replace(
+                'return amount * TAX_RATE;',
+                'if (amount < 0 || rate < 0) return 0.0;\n        return amount * TAX_RATE;'
+            ).replace(
+                'return amount * 0.08;',
+                'if (amount < 0) return 0.0;\n        return amount * 0.08;'
+            )
+            if new_content != content:
+                tc.write_text(new_content, encoding="utf-8")
+                _git(sample_dir, "add", "-A")
+                _git(sample_dir, "commit", "-m", "Add guard to TaxCalculator and wire CurrencyConverter")
+
+    # Verify
+    check = subprocess.run(
+        ["git", "log", "--oneline"],
+        cwd=str(sample_dir),
+        capture_output=True, text=True,
+    )
+    if check.returncode == 0:
+        count = len(check.stdout.strip().split("\n"))
+        print(f"Sample repo ready: {count} commits")
+        return True
+
+    return False
