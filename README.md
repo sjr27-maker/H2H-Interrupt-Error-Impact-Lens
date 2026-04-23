@@ -263,7 +263,7 @@ Pydantic model validation, git diff extraction with line ranges, Tree-sitter Jav
 
 ## Build Progress
 
-### Day 1 — Foundation (Wed, April 16)
+### Day 1 — Foundation (Thursday, April 16)
 
 - [x] Repository initialized and submitted via Google Form
 - [x] Pydantic data models defined (SourceSymbol, CallEdge, ChangedRegion, TestCase, ImpactResult)
@@ -275,7 +275,7 @@ Pydantic model validation, git diff extraction with line ranges, Tree-sitter Jav
 - [x] Pytest smoke suite covering the data models
 - [x] Architecture and data-contract documentation
 
-### Day 2 — Java Parsing and Git Diff (Thu, April 17)
+### Day 2 — Java Parsing and Git Diff (Fri, April 17)
 
 - [x] Git diff extractor with hunk-level line-range precision via GitPython
 - [x] Full Tree-sitter Java parser — classes, methods, constructors, imports, invocations
@@ -285,7 +285,7 @@ Pydantic model validation, git diff extraction with line ranges, Tree-sitter Jav
 - [x] Sample repo enhanced — 5-commit history with scripted setup
 - [x] 15+ tests covering parser, adapter, diff extractor, and integration pipeline
 
-### Day 3 — Impact Analysis and Test Execution (Fri, April 18)
+### Day 3 — Impact Analysis and Test Execution (Sat, April 18)
 
 - [x] Reverse-BFS impact analyzer with class expansion and 7 unit tests
 - [x] Two-layer test mapper (convention + import-based matching) with 5 tests
@@ -296,7 +296,7 @@ Pydantic model validation, git diff extraction with line ranges, Tree-sitter Jav
 - [x] 4 demo scenarios verified (leaf, mid-level, new file, multi-change)
 - [x] Cross-platform path normalization for Windows compatibility
 
-### Day 4 — LLM Augmentation and Scale Target (Sat, April 19)
+### Day 4 — LLM Augmentation and Scale Target (Sun, April 19)
 
 - [x] LLM client wrapper with Anthropic/OpenAI/Groq fallback chain
 - [x] Test justification generator — LLM-powered with template fallback
@@ -308,7 +308,7 @@ Pydantic model validation, git diff extraction with line ranges, Tree-sitter Jav
 - [x] Optional AI dependencies in pyproject.toml with .env.example
 - [x] Auto-loading of .env for API keys via python-dotenv
 
-### Day 5 — Web Dashboard (Sun, April 20)
+### Day 5 — Web Dashboard (Mon, April 20)
 
 - [x] Streamlit dashboard with sidebar repo/commit picker and quick-demo buttons
 - [x] Interactive pyvis call graph with color-coded blast radius
@@ -320,17 +320,22 @@ Pydantic model validation, git diff extraction with line ranges, Tree-sitter Jav
 - [x] Dashboard CLI command (`impactlens dashboard`)
 - [x] Dashboard screenshots for README
 
-### Day 6 — Web Dashboard (Mon, April 21)
+### Day 6 — Web Dashboard (Tuesday, April 21)
 
-- [x] Streamlit Community Cloud deployment — public live URL
+- [x] Streamlit Community Cloud deployment — public live URL(not successfull)
 - [x] One-click "Analyze Sample Repo" mode for instant demos
 - [x] Benchmark report — accuracy and time-saved metrics
 
-### Day 7 — Project UI redesigning (Tue, April 22)
+### Day 7 — Project UI redesigning (Wednesday, April 22)
 
  - [x] README polish
  - [x] Complete architecture section with diagrams
  - [x] Setup instructions verified against a fresh clone
+
+ ### Day 8 —(Thursday , April 23)
+
+ - [x] FINAL README polish
+ - [x] Deployed tool
  
 ## Team Members
 
@@ -343,7 +348,7 @@ Pydantic model validation, git diff extraction with line ranges, Tree-sitter Jav
 
 ## Deployed Link
 
-Deployment planned for April 21 (Day 6). Live URL will be added here.
+https://h2h-interrupt-error-impact-lens-c5trk85wuyhwtdgexu9u4d.streamlit.app/
 
 ---
 

@@ -36,7 +36,7 @@ from impactlens.core.registry import register_all_adapters
 register_all_adapters()
 
 # ── Config ──
-st.set_page_config(page_title="ImpactLens", page_icon="🎯", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="ImpactLens", page_icon="AS", layout="wide", initial_sidebar_state="expanded")
 
 CLONE_DIR = Path(tempfile.gettempdir()) / "impactlens_clones"
 CLONE_DIR.mkdir(exist_ok=True)
