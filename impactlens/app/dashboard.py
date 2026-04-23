@@ -1,6 +1,6 @@
 """
-ImpactLens Web Dashboard — Streamlit app.
-Launch with: streamlit run app/dashboard.py
+ImpactLens Web Dashboard
+Launch: streamlit run app/dashboard.py
 """
 from __future__ import annotations
 
@@ -15,143 +15,119 @@ from pathlib import Path
 
 import streamlit as st
 
-# ── Path Setup ──
+# ── Paths ──
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-# Load .env
 try:
     from dotenv import load_dotenv
     load_dotenv(project_root / ".env")
 except ImportError:
     pass
 
-# Setup sample repo (critical for cloud deployment)
+# ── Setup sample repo on cloud ──
 try:
     from setup_for_cloud import ensure_sample_repo
     ensure_sample_repo()
 except Exception as e:
-    print(f"Sample repo setup: {e}")
+    print(f"Setup: {e}")
 
 from impactlens.core.registry import register_all_adapters
 register_all_adapters()
 
-# ── Page Config ──
-st.set_page_config(
-    page_title="ImpactLens",
-    page_icon="🎯",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+# ── Config ──
+st.set_page_config(page_title="ImpactLens", page_icon="🎯", layout="wide", initial_sidebar_state="expanded")
+
+CLONE_DIR = Path(tempfile.gettempdir()) / "impactlens_clones"
+CLONE_DIR.mkdir(exist_ok=True)
+
+# Small repos that actually work for demos
+SUGGESTED_REPOS = {
+    "Apache Commons Text": "https://github.com/apache/commons-text.git",
+    "Google Gson": "https://github.com/google/gson.git",
+    "Square Moshi": "https://github.com/square/moshi.git",
+    "Joda Money": "https://github.com/JodaOrg/joda-money.git",
+}
 
 # ── CSS ──
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+* { font-family: 'Inter', sans-serif; }
 
-    * { font-family: 'Inter', sans-serif; }
+/* Header */
+.hero { text-align:center; padding:10px 0 20px; }
+.hero h1 {
+    font-size:2.6rem; font-weight:700;
+    background:linear-gradient(135deg,#e17055,#fdcb6e,#00b894);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    margin:0;
+}
+.hero p { color:#888; font-size:1rem; margin-top:-4px; }
 
-    .main-title {
-        font-size: 2.4rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #e17055, #fdcb6e);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0;
-    }
-    .sub-title {
-        font-size: 1.05rem;
-        color: #888;
-        margin-top: -8px;
-        margin-bottom: 24px;
-    }
+/* Metrics */
+div[data-testid="metric-container"] {
+    background:linear-gradient(145deg,#141422,#1a1a2e);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:14px; padding:18px;
+    box-shadow:0 8px 25px rgba(0,0,0,0.3);
+}
+div[data-testid="metric-container"] label { color:#999 !important; font-size:0.78rem !important; text-transform:uppercase; letter-spacing:0.5px; }
+div[data-testid="metric-container"] div[data-testid="stMetricValue"] { font-size:1.9rem !important; font-weight:700 !important; }
 
-    /* Metric cards */
-    div[data-testid="metric-container"] {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        border: 1px solid #2d3436;
-        border-radius: 12px;
-        padding: 16px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
-    div[data-testid="metric-container"] label {
-        color: #aaa !important;
-        font-size: 0.8rem !important;
-    }
-    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-        font-size: 1.8rem !important;
-        font-weight: 700 !important;
-    }
+/* Sidebar */
+section[data-testid="stSidebar"] { background:linear-gradient(180deg,#080810,#0e1117) !important; }
+section[data-testid="stSidebar"] hr { border-color:rgba(255,255,255,0.06) !important; }
 
-    /* Tabs */
-    button[data-baseweb="tab"] {
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
-    }
+/* Tabs */
+button[data-baseweb="tab"] { font-weight:600 !important; }
 
-    /* Sidebar */
-    div[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0a0a14 0%, #0e1117 100%);
-    }
-    div[data-testid="stSidebar"] .stSelectbox label,
-    div[data-testid="stSidebar"] .stTextInput label {
-        color: #ccc !important;
-        font-weight: 600 !important;
-        font-size: 0.85rem !important;
-    }
+/* Cards */
+.card {
+    background:linear-gradient(145deg,#141422,#1a1a2e);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:14px; padding:20px;
+    box-shadow:0 4px 20px rgba(0,0,0,0.25);
+    margin-bottom:16px;
+}
 
-    /* Expanders */
-    details {
-        border: 1px solid #2d3436 !important;
-        border-radius: 8px !important;
-        margin-bottom: 8px !important;
-    }
-    details summary {
-        font-weight: 500 !important;
-    }
+/* Expanders */
+details { border:1px solid rgba(255,255,255,0.08) !important; border-radius:10px !important; margin-bottom:6px !important; }
+details[open] { border-color:rgba(225,112,85,0.3) !important; }
 
-    /* Graph container */
-    .graph-frame {
-        border: 1px solid #2d3436;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
+/* Buttons */
+.stButton>button { border-radius:10px !important; font-weight:600 !important; transition:all 0.2s !important; }
+.stButton>button:hover { transform:translateY(-1px) !important; box-shadow:0 6px 20px rgba(0,0,0,0.3) !important; }
 
-    /* Buttons */
-    .stButton > button {
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        transition: all 0.2s ease !important;
-    }
-    .stButton > button:hover {
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-    }
+/* Graph frame */
+.graph-wrap {
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 8px 30px rgba(0,0,0,0.4);
+}
 
-    /* Info/warning boxes */
-    div[data-testid="stAlert"] {
-        border-radius: 8px !important;
-    }
+/* Quick demo chips */
+.demo-chip {
+    display:inline-block; padding:6px 14px;
+    background:rgba(225,112,85,0.15); border:1px solid rgba(225,112,85,0.3);
+    border-radius:20px; color:#e17055; font-size:0.8rem; font-weight:600;
+    margin:2px;
+}
 
-    /* Dataframe */
-    div[data-testid="stDataFrame"] {
-        border-radius: 8px;
-        overflow: hidden;
-    }
+/* Reduce top padding */
+.block-container { padding-top:1.5rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
 
-# ── Clone directory ──
-CLONE_DIR = Path(tempfile.gettempdir()) / "impactlens_clones"
-CLONE_DIR.mkdir(exist_ok=True)
+# ══════════════════════════════════════════════════════
+# HELPERS
+# ══════════════════════════════════════════════════════
 
-
-def clone_repo(url: str) -> Path | None:
-    """Clone a git repo from URL. Uses shallow clone for speed."""
-    repo_name = url.rstrip("/").split("/")[-1].replace(".git", "")
-    folder = f"{repo_name}_{hashlib.md5(url.encode()).hexdigest()[:8]}"
+def clone_repo(url: str, progress_bar=None) -> Path | None:
+    """Clone with depth limit, timeout, and progress feedback."""
+    name = url.rstrip("/").split("/")[-1].replace(".git", "")
+    folder = f"{name}_{hashlib.md5(url.encode()).hexdigest()[:6]}"
     dest = CLONE_DIR / folder
 
     if (dest / ".git").exists():
@@ -161,135 +137,152 @@ def clone_repo(url: str) -> Path | None:
         shutil.rmtree(dest, ignore_errors=True)
 
     try:
-        result = subprocess.run(
-            ["git", "clone", "--depth", "20", "--single-branch", url, str(dest)],
-            capture_output=True, text=True, timeout=120,
+        if progress_bar:
+            progress_bar.progress(10, "Starting clone...")
+
+        proc = subprocess.Popen(
+            ["git", "clone", "--depth", "15", "--single-branch", "--no-tags", url, str(dest)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
-        if result.returncode == 0 and (dest / ".git").exists():
+
+        # Wait with timeout
+        start = time.time()
+        while proc.poll() is None:
+            elapsed = time.time() - start
+            if elapsed > 45:
+                proc.kill()
+                if dest.exists():
+                    shutil.rmtree(dest, ignore_errors=True)
+                return None
+            if progress_bar:
+                pct = min(80, int(10 + elapsed * 1.5))
+                progress_bar.progress(pct, f"Cloning... ({elapsed:.0f}s)")
+            time.sleep(0.5)
+
+        if progress_bar:
+            progress_bar.progress(90, "Verifying...")
+
+        if proc.returncode == 0 and (dest / ".git").exists():
+            if progress_bar:
+                progress_bar.progress(100, "Done!")
             return dest
+
+        if dest.exists():
+            shutil.rmtree(dest, ignore_errors=True)
         return None
-    except subprocess.TimeoutExpired:
-        return None
+
     except Exception:
+        if dest.exists():
+            shutil.rmtree(dest, ignore_errors=True)
         return None
 
 
-def get_sample_repos() -> dict[str, Path]:
-    """Discover available repositories."""
+def get_repos() -> dict[str, Path]:
     repos = {}
-    sample_dir = project_root / "sample_repos"
-    if sample_dir.exists():
-        for child in sorted(sample_dir.iterdir()):
-            if child.is_dir() and (child / ".git").exists():
-                repos[child.name] = child
-
+    sd = project_root / "sample_repos"
+    if sd.exists():
+        for c in sorted(sd.iterdir()):
+            if c.is_dir() and (c / ".git").exists():
+                repos[c.name] = c
     if CLONE_DIR.exists():
-        for child in sorted(CLONE_DIR.iterdir()):
-            if child.is_dir() and (child / ".git").exists():
-                repos[f"{child.name} (cloned)"] = child
-
+        for c in sorted(CLONE_DIR.iterdir()):
+            if c.is_dir() and (c / ".git").exists():
+                repos[f"{c.name} (cloned)"] = c
     return repos
 
 
-def get_commits(repo_path: Path, max_count: int = 20) -> list[dict]:
-    """Get recent commits."""
+def get_commits(repo_path: Path, n: int = 20) -> list[dict]:
     try:
         from git import Repo
-        repo = Repo(str(repo_path))
-        commits = []
-        for c in repo.iter_commits("HEAD", max_count=max_count):
-            commits.append({
-                "hash": str(c)[:8],
-                "full_hash": str(c),
-                "message": c.summary[:60],
-            })
-        return commits
+        return [
+            {"hash": str(c)[:8], "full": str(c), "msg": c.summary[:55]}
+            for c in Repo(str(repo_path)).iter_commits("HEAD", max_count=n)
+        ]
     except Exception as e:
-        st.error(f"Failed to read commits: {e}")
         return []
 
 
-def run_pipeline(repo_path: Path, base: str, head: str):
-    """Run the ImpactLens pipeline."""
+def run_pipeline(repo_path, base, head):
     from impactlens.core.pipeline import run_analysis
     return run_analysis(repo_path, base, head, run_tests=False)
 
 
-# ══════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════
 # SIDEBAR
-# ══════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════
+
 with st.sidebar:
-    st.markdown("### ImpactLens")
-    st.caption("_Change anything. Test only what matters._")
+    st.markdown("### 🎯 ImpactLens")
+    st.caption("Change anything. Test only what matters.")
     st.divider()
 
-    # ── Clone from URL ──
-    st.markdown("**Analyze any Java repo**")
+    # ── Clone Section ──
+    st.markdown("**Analyze external repo**")
+
+    # Suggested repos dropdown
+    selected_suggestion = st.selectbox(
+        "Quick pick a repo",
+        options=["(paste your own)"] + list(SUGGESTED_REPOS.keys()),
+        label_visibility="collapsed",
+    )
+
+    if selected_suggestion != "(paste your own)":
+        clone_url = SUGGESTED_REPOS[selected_suggestion]
+    else:
+        clone_url = ""
+
     git_url = st.text_input(
-        "GitHub URL",
+        "Or paste GitHub URL",
+        value=clone_url,
         placeholder="https://github.com/user/repo.git",
         label_visibility="collapsed",
     )
 
-    clone_clicked = st.button("Clone & Load", use_container_width=True, disabled=not git_url)
+    clone_btn = st.button("Clone & Load", use_container_width=True, disabled=not git_url)
 
-    if clone_clicked and git_url:
-        with st.spinner(f"Cloning {git_url.split('/')[-1]}..."):
-            cloned = clone_repo(git_url)
-            if cloned:
-                st.success(f"Cloned successfully!")
-                st.rerun()
-            else:
-                st.error("Clone failed. Check the URL and try again.")
+    if clone_btn and git_url:
+        progress = st.progress(0, "Preparing...")
+        cloned = clone_repo(git_url, progress)
+        if cloned:
+            st.success("Repository cloned!")
+            time.sleep(0.5)
+            st.rerun()
+        else:
+            st.error("Clone failed — repo may be too large (>100MB) or URL is invalid. Try one of the suggested repos.")
 
     st.divider()
 
-    # ── Repo selection ──
-    repos = get_sample_repos()
+    # ── Repo Selector ──
+    repos = get_repos()
 
     if not repos:
-        st.warning("No repos available. Paste a GitHub URL above to get started.")
-
-        # Show pre-computed results as fallback
-        precomputed_dir = project_root / "docs" / "precomputed"
-        if precomputed_dir.exists():
-            for jf in precomputed_dir.glob("*.json"):
-                try:
-                    data = json.loads(jf.read_text())
-                    st.markdown("---")
-                    st.markdown(f"**Pre-computed: {data.get('repo', jf.stem)}**")
-                    stats = data.get("stats", {})
-                    st.metric("Symbols", stats.get("total_symbols", 0))
-                    st.metric("Tests", stats.get("total_tests", 0))
-                except Exception:
-                    pass
+        st.warning("No repos available yet.")
+        st.caption("Use the clone feature above, or the setup will create a demo repo on next reload.")
+        if st.button("Reload", use_container_width=True):
+            st.rerun()
         st.stop()
 
-    repo_name = st.selectbox("Repository", options=list(repos.keys()))
+    st.markdown("**Repository**")
+    repo_name = st.selectbox("Repo", options=list(repos.keys()), label_visibility="collapsed")
     repo_path = repos[repo_name]
-
-    st.divider()
 
     # ── Commits ──
     commits = get_commits(repo_path)
-
     if len(commits) < 2:
-        st.warning("Need at least 2 commits.")
+        st.warning("Need at least 2 commits to diff.")
         st.stop()
 
-    st.markdown("**Base commit** _(before)_")
+    st.markdown("**Base** _(before change)_")
     base_idx = st.selectbox(
-        "Base", options=range(len(commits)),
-        index=min(1, len(commits) - 1),
-        format_func=lambda i: f"{commits[i]['hash']} — {commits[i]['message']}",
+        "base", range(len(commits)), index=min(1, len(commits)-1),
+        format_func=lambda i: f"{commits[i]['hash']} — {commits[i]['msg']}",
         label_visibility="collapsed",
     )
 
-    st.markdown("**Head commit** _(after)_")
+    st.markdown("**Head** _(after change)_")
     head_idx = st.selectbox(
-        "Head", options=range(len(commits)),
-        index=0,
-        format_func=lambda i: f"{commits[i]['hash']} — {commits[i]['message']}",
+        "head", range(len(commits)), index=0,
+        format_func=lambda i: f"{commits[i]['hash']} — {commits[i]['msg']}",
         label_visibility="collapsed",
     )
 
@@ -297,255 +290,231 @@ with st.sidebar:
         st.error("Base must be older than Head.")
         st.stop()
 
-    base_ref = commits[base_idx]["full_hash"]
-    head_ref = commits[head_idx]["full_hash"]
+    base_ref = commits[base_idx]["full"]
+    head_ref = commits[head_idx]["full"]
 
     st.divider()
 
-    # ── Quick demos ──
+    # ── Quick Demos (always show for java_demo) ──
+    quick_demo = None
     if "java_demo" in repo_name and len(commits) >= 5:
         st.markdown("**Quick demos**")
-        qc1, qc2 = st.columns(2)
-        quick_demo = None
-        with qc1:
-            if st.button("Leaf change", use_container_width=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("🍃 Leaf", use_container_width=True, help="PriceFormatter change → 73% reduction"):
                 quick_demo = ("HEAD~4", "HEAD~3")
-            if st.button("New file", use_container_width=True):
+            if st.button("📄 New file", use_container_width=True, help="CurrencyConverter added"):
                 quick_demo = ("HEAD~2", "HEAD~1")
-        with qc2:
-            if st.button("Mid ripple", use_container_width=True):
+        with c2:
+            if st.button("🌊 Ripple", use_container_width=True, help="DiscountCalculator mid-level change"):
                 quick_demo = ("HEAD~3", "HEAD~2")
-            if st.button("Multi-change", use_container_width=True):
+            if st.button("⚡ Multi", use_container_width=True, help="TaxCalculator + CheckoutHandler"):
                 quick_demo = ("HEAD~1", "HEAD")
 
         if quick_demo:
-            base_ref = quick_demo[0]
-            head_ref = quick_demo[1]
+            base_ref, head_ref = quick_demo
 
         st.divider()
 
-    # ── Analyze button ──
-    analyze_clicked = st.button("Analyze Impact", type="primary", use_container_width=True)
+    # ── Analyze ──
+    analyze_btn = st.button("Analyze Impact", type="primary", use_container_width=True)
 
-    # ── LLM status ──
+    # LLM status
     from impactlens.ai.llm_client import get_llm_client
     llm = get_llm_client()
     if llm.is_available():
         st.success(f"AI: {llm.provider_name}", icon="🤖")
     else:
-        st.info("AI: templates (no API key)", icon="📝")
+        st.info("AI: templates only", icon="📝")
 
 
-# ══════════════════════════════════════════════════════════════
-# MAIN CONTENT
-# ══════════════════════════════════════════════════════════════
-st.markdown('<p class="main-title">ImpactLens</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">Impact analysis and selective test execution</p>', unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════
+# MAIN
+# ══════════════════════════════════════════════════════
 
-# Run analysis
-if analyze_clicked or (locals().get("quick_demo")):
-    with st.spinner("Running impact analysis..."):
+# Header
+st.markdown("""
+<div class="hero">
+    <h1>ImpactLens</h1>
+    <p>Impact analysis and selective test execution for Java codebases</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Run
+if analyze_btn or quick_demo:
+    with st.spinner("Analyzing..."):
         try:
-            t0 = time.time()
             result = run_pipeline(repo_path, base_ref, head_ref)
             st.session_state["result"] = result
-            st.session_state["elapsed"] = time.time() - t0
         except Exception as e:
             st.error(f"Analysis failed: {e}")
-            import traceback
-            st.code(traceback.format_exc())
             st.stop()
 
-# Display results
-if "result" in st.session_state:
-    result = st.session_state["result"]
-    analysis = result.analysis
-    impact = analysis.impact
+# Results
+if "result" not in st.session_state:
+    # Landing
+    col_l, col_r = st.columns([3, 2])
+    with col_l:
+        st.markdown("""
+        ### How it works
 
-    # ── Metrics ──
-    m1, m2, m3, m4, m5 = st.columns(5)
-    with m1:
-        st.metric("Symbols", f"{analysis.total_symbols:,}")
-    with m2:
-        st.metric("Call Edges", f"{result.graph.edge_count:,}")
-    with m3:
-        st.metric("Changed", f"{len(impact.changed_symbols)}")
-    with m4:
-        st.metric("Impacted", f"{len(impact.impacted_symbols)}")
-    with m5:
-        if analysis.total_tests > 0:
-            r = (1 - len(impact.selected_tests) / analysis.total_tests) * 100
-            st.metric("Reduction", f"{r:.0f}%")
-        else:
-            st.metric("Tests", "0")
+        1. **Select a repository** from the sidebar — or clone one from GitHub
+        2. **Pick two commits** — a base (before) and head (after)
+        3. **Click "Analyze Impact"** to trace the blast radius
+        4. **Explore results** — interactive call graph, selected tests, timing breakdown
 
-    st.divider()
+        ImpactLens parses your Java codebase, builds a call graph, and uses reverse BFS
+        to find every function affected by your change. Then it selects only the tests
+        that exercise that code — typically reducing test runtime by **50-73%**.
+        """)
+    with col_r:
+        st.markdown("""
+        ### Try a quick demo
 
-    # ── Tabs ──
-    tab_graph, tab_tests, tab_details, tab_timings = st.tabs([
-        "🕸️ Call Graph",
-        "🧪 Selected Tests",
-        "📋 Impact Details",
-        "⏱️ Timings",
-    ])
+        Select **java_demo** in the sidebar and click any quick demo button:
 
-    # ── TAB 1: Call Graph ──
-    with tab_graph:
-        st.markdown("### Interactive Call Graph")
-        st.caption("**Red** = changed · **Orange** = impacted · **Green** = safe · Hover for details · Scroll to zoom · Drag to pan")
+        - **Leaf** — change a utility, see minimal blast radius
+        - **Ripple** — change a mid-level class, watch it propagate
+        - **New file** — add a class, see isolated impact
+        - **Multi** — change two files, see the widest blast radius
+        """)
+    st.stop()
 
-        st.markdown('<div class="graph-frame">', unsafe_allow_html=True)
+result = st.session_state["result"]
+analysis = result.analysis
+impact = analysis.impact
+
+# ── Metrics ──
+m1, m2, m3, m4, m5 = st.columns(5)
+with m1: st.metric("Symbols", f"{analysis.total_symbols:,}")
+with m2: st.metric("Call Edges", f"{result.graph.edge_count:,}")
+with m3: st.metric("Changed", f"{len(impact.changed_symbols)}")
+with m4: st.metric("Impacted", f"{len(impact.impacted_symbols)}")
+with m5:
+    if analysis.total_tests > 0:
+        r = (1 - len(impact.selected_tests) / analysis.total_tests) * 100
+        st.metric("Reduction", f"{r:.0f}%")
+    else:
+        st.metric("Tests", "0")
+
+st.markdown("")
+
+# ── Tabs ──
+tab_graph, tab_tests, tab_details, tab_timings = st.tabs([
+    "🕸️  Call Graph", "🧪  Selected Tests", "📋  Impact Details", "⏱️  Timings"
+])
+
+# TAB 1: Graph
+with tab_graph:
+    if result.graph.node_count > 0:
+        st.caption("Red = changed · Orange = impacted · Green = safe · **Hover** to highlight connections · **Scroll** to zoom · **Drag** to pan")
+        st.markdown('<div class="graph-wrap">', unsafe_allow_html=True)
         from graph_viz import render_call_graph
         render_call_graph(result.graph, impact)
         st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.info("No symbols in the call graph for this diff.")
 
-    # ── TAB 2: Selected Tests ──
-    with tab_tests:
-        if impact.selected_tests:
-            tc = len(impact.selected_tests)
-            tot = analysis.total_tests
-            red = (1 - tc / tot) * 100 if tot > 0 else 0
+# TAB 2: Tests
+with tab_tests:
+    if not impact.selected_tests:
+        st.warning("No tests were selected — the change may not affect any Java source code.")
+        st.stop()
 
-            st.markdown(f"### {tc} of {tot} tests selected ({red:.0f}% reduction)")
+    tc = len(impact.selected_tests)
+    tot = analysis.total_tests
+    red = (1 - tc / tot) * 100 if tot > 0 else 0
 
-            # Score lookup
-            score_map = {}
-            for s in result.scored_tests:
-                score_map[s.test.id] = (s.confidence, s.match_method)
+    st.markdown(f"### {tc} of {tot} tests selected — {red:.0f}% reduction")
 
-            # Pagination
-            PAGE = 25
-            pages = (tc + PAGE - 1) // PAGE
-            if pages > 1:
-                page = st.number_input("Page", 1, pages, 1)
-                start = (page - 1) * PAGE
-                end = min(start + PAGE, tc)
-                st.caption(f"Showing {start+1}–{end} of {tc}")
-            else:
-                start, end = 0, tc
+    score_map = {s.test.id: (s.confidence, s.match_method) for s in result.scored_tests}
 
-            for i, t in enumerate(impact.selected_tests[start:end], start + 1):
-                conf, method = score_map.get(t.id, (0.0, "unknown"))
-                justification = impact.reasoning.get(t.id, "")
+    PAGE = 20
+    pages = max(1, (tc + PAGE - 1) // PAGE)
+    if pages > 1:
+        page = st.number_input("Page", 1, pages, 1)
+        start, end = (page-1)*PAGE, min(page*PAGE, tc)
+        st.caption(f"Showing {start+1}–{end} of {tc}")
+    else:
+        start, end = 0, tc
 
-                # Confidence color
-                if conf >= 0.85:
-                    badge = "🟢"
-                elif conf >= 0.65:
-                    badge = "🟡"
-                else:
-                    badge = "🔴"
+    for i, t in enumerate(impact.selected_tests[start:end], start+1):
+        conf, method = score_map.get(t.id, (0.0, "?"))
+        justification = impact.reasoning.get(t.id, "No justification available.")
+        badge = "🟢" if conf >= 0.85 else ("🟡" if conf >= 0.65 else "🔴")
 
-                preview = justification[:100] + "..." if len(justification) > 100 else justification
+        with st.expander(f"{badge}  **{i}. {t.name}** — {conf:.0%} · {method}"):
+            left, right = st.columns([2, 3])
+            with left:
+                st.markdown(f"`{t.id}`")
+                st.markdown(f"**Confidence:** {conf:.0%}  \n**Method:** {method}  \n**File:** `{Path(t.file_path).name}`")
+            with right:
+                st.markdown("**Why this test was selected:**")
+                st.info(justification)
 
-                with st.expander(f"{badge} **{i}. {t.name}** — {conf:.0%} ({method})"):
-                    c1, c2 = st.columns([1, 2])
-                    with c1:
-                        st.markdown(f"**Test ID:** `{t.id}`")
-                        st.markdown(f"**Confidence:** {conf:.0%}")
-                        st.markdown(f"**Method:** {method}")
-                        st.markdown(f"**File:** `{Path(t.file_path).name}`")
-                    with c2:
-                        st.markdown("**Why this test was selected:**")
-                        st.info(justification if justification else "No justification generated.")
-        else:
-            st.warning("No tests were selected for this change.")
-
-    # ── TAB 3: Impact Details ──
-    with tab_details:
+# TAB 3: Details
+with tab_details:
+    if analysis.changed_regions:
         st.markdown("### Changed Regions")
-        if analysis.changed_regions:
-            rows = []
-            for r in analysis.changed_regions:
-                rows.append({
-                    "File": r.file_path.split("/")[-1],
-                    "Path": r.file_path,
-                    "Change": r.change_type.value,
-                    "Old": f"{r.old_range.start}-{r.old_range.end}" if r.old_range else "—",
-                    "New": f"{r.new_range.start}-{r.new_range.end}" if r.new_range else "—",
-                })
-            st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.dataframe(
+            [{"File": r.file_path.split("/")[-1], "Change": r.change_type.value,
+              "Old": f"{r.old_range.start}-{r.old_range.end}" if r.old_range else "—",
+              "New": f"{r.new_range.start}-{r.new_range.end}" if r.new_range else "—"}
+             for r in analysis.changed_regions],
+            use_container_width=True, hide_index=True,
+        )
 
-        col_changed, col_impacted = st.columns(2)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("### Changed Symbols")
+        for sid in impact.changed_symbols[:20]:
+            sym = result.graph.get_symbol(sid)
+            st.markdown(f"🔴 `{sym.name}` _{sym.kind.value}_" if sym else f"🔴 `{sid}`")
 
-        with col_changed:
-            st.markdown("### Changed Symbols")
-            for sid in impact.changed_symbols:
-                sym = result.graph.get_symbol(sid)
-                if sym:
-                    st.markdown(f"🔴 `{sym.name}` _{sym.kind.value}_ in `{Path(sym.file_path).name}`")
+    with c2:
+        st.markdown("### Transitive Impact")
+        trans = sorted(set(impact.impacted_symbols) - set(impact.changed_symbols))
+        for sid in trans[:20]:
+            sym = result.graph.get_symbol(sid)
+            st.markdown(f"🟠 `{sym.name}` _{sym.kind.value}_" if sym else f"🟠 `{sid}`")
+        if len(trans) > 20:
+            st.caption(f"+ {len(trans)-20} more")
+        if not trans:
+            st.info("No transitive impact — changes are isolated.")
 
-        with col_impacted:
-            st.markdown("### Impacted (transitive)")
-            transitive = sorted(set(impact.impacted_symbols) - set(impact.changed_symbols))
-            if transitive:
-                for sid in transitive[:30]:
-                    sym = result.graph.get_symbol(sid)
-                    if sym:
-                        st.markdown(f"🟠 `{sym.name}` _{sym.kind.value}_")
-                if len(transitive) > 30:
-                    st.caption(f"... and {len(transitive) - 30} more")
-            else:
-                st.info("No transitive impact — changes are isolated.")
+# TAB 4: Timings
+with tab_timings:
+    import pandas as pd
+    t = result.timings
 
-    # ── TAB 4: Timings ──
-    with tab_timings:
-        st.markdown("### Pipeline Performance")
+    st.markdown("### Pipeline Performance")
+    st.dataframe([
+        {"Stage": "Diff", "ms": round(t.diff_ms)},
+        {"Stage": "Parse", "ms": round(t.parse_ms)},
+        {"Stage": "Graph", "ms": round(t.graph_ms)},
+        {"Stage": "Impact", "ms": round(t.impact_ms)},
+        {"Stage": "Mapping", "ms": round(t.mapping_ms)},
+        {"Stage": "Total", "ms": round(t.total_ms)},
+    ], use_container_width=True, hide_index=True)
 
-        t = result.timings
-        timing_rows = [
-            {"Stage": "Diff Extraction", "Duration (ms)": round(t.diff_ms)},
-            {"Stage": "Parsing", "Duration (ms)": round(t.parse_ms)},
-            {"Stage": "Graph Building", "Duration (ms)": round(t.graph_ms)},
-            {"Stage": "Impact Analysis", "Duration (ms)": round(t.impact_ms)},
-            {"Stage": "Test Mapping", "Duration (ms)": round(t.mapping_ms)},
-            {"Stage": "Total", "Duration (ms)": round(t.total_ms)},
-        ]
-        st.dataframe(timing_rows, use_container_width=True, hide_index=True)
+    st.bar_chart(pd.DataFrame({
+        "Stage": ["Diff", "Parse", "Graph", "Impact", "Map"],
+        "ms": [t.diff_ms, t.parse_ms, t.graph_ms, t.impact_ms, t.mapping_ms],
+    }).set_index("Stage"))
 
-        import pandas as pd
-        chart = pd.DataFrame({
-            "Stage": ["Diff", "Parse", "Graph", "Impact", "Mapping"],
-            "Time (ms)": [t.diff_ms, t.parse_ms, t.graph_ms, t.impact_ms, t.mapping_ms],
-        })
-        st.bar_chart(chart.set_index("Stage"))
+    if analysis.total_tests > 0:
+        st.markdown("### Test Reduction")
+        sel = len(impact.selected_tests)
+        st.bar_chart(pd.DataFrame({
+            "": ["Will Run", "Skipped"],
+            "Tests": [sel, analysis.total_tests - sel],
+        }).set_index(""))
 
-        if analysis.total_tests > 0:
-            st.markdown("### Test Reduction")
-            sel = len(impact.selected_tests)
-            skip = analysis.total_tests - sel
-            red_df = pd.DataFrame({
-                "Category": ["Will Run", "Skipped"],
-                "Tests": [sel, skip],
-            })
-            st.bar_chart(red_df.set_index("Category"))
-
-        # Export
-        st.divider()
-        export = {
-            "repo": str(repo_path),
-            "changed_symbols": impact.changed_symbols,
-            "impacted_files": impact.impacted_files,
-            "selected_tests": [{"id": t.id, "confidence": score_map.get(t.id, (0,))[0]} for t in impact.selected_tests],
-            "timings": result.timings.summary(),
-        }
-        st.download_button("Download JSON", json.dumps(export, indent=2), "impactlens_results.json", "application/json")
-
-else:
-    # ── Landing Page ──
-    st.markdown("""
-    ### Getting Started
-
-    1. **Select a repository** from the sidebar — or paste a GitHub URL to clone one
-    2. **Pick two commits** — base (before) and head (after)
-    3. **Click "Analyze Impact"** to run the pipeline
-    4. **Explore** — call graph, tests, impact details, timings
-
-    Use the **Quick demo** buttons for instant pre-configured scenarios.
-
-    ---
-
-    **What ImpactLens does:** Given a code change in a Java repository, ImpactLens traces
-    the blast radius through the call graph, selects only the tests that exercise affected code,
-    and explains why each test was chosen — reducing test suite runtime by up to 73%.
-    """)
+    st.divider()
+    export = {
+        "changed": impact.changed_symbols,
+        "impacted_files": impact.impacted_files,
+        "tests": [{"id": t.id, "conf": score_map.get(t.id, (0,))[0]} for t in impact.selected_tests],
+        "timings": result.timings.summary(),
+    }
+    st.download_button("Download JSON", json.dumps(export, indent=2), "results.json", "application/json")
