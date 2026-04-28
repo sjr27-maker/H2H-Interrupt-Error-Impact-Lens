@@ -23,9 +23,9 @@ from impactlens.graph.call_graph import CallGraph
 def render_call_graph(
     graph: CallGraph,
     impact: ImpactResult,
-    height: str = "500px",
+    height: str = "520px",
 ) -> None:
-    """Render an interactive call graph in Streamlit."""
+    """Render an interactive call graph in Streamlit with fullscreen support."""
 
     changed_set = set(impact.changed_symbols)
     impacted_set = set(impact.impacted_symbols)
@@ -41,7 +41,6 @@ def render_call_graph(
         filter_menu=False,
     )
 
-    # Physics settings for better layout
     net.set_options("""
     {
         "physics": {
@@ -53,9 +52,7 @@ def render_call_graph(
                 "springLength": 120,
                 "springConstant": 0.08
             },
-            "stabilization": {
-                "iterations": 100
-            }
+            "stabilization": { "iterations": 100 }
         },
         "edges": {
             "arrows": { "to": { "enabled": true, "scaleFactor": 0.5 } },
@@ -78,55 +75,38 @@ def render_call_graph(
 
     nx_graph = graph.graph
 
-    # Limit nodes for large graphs
     max_nodes = 100
     nodes_to_show = set()
-
-    # Always show changed and impacted nodes
     nodes_to_show.update(changed_set)
     nodes_to_show.update(impacted_set)
 
-    # Add neighbors of impacted nodes
     for node in list(nodes_to_show):
         if node in nx_graph:
             nodes_to_show.update(nx_graph.predecessors(node))
             nodes_to_show.update(nx_graph.successors(node))
 
-    # If still under limit, add more nodes
     if len(nodes_to_show) < max_nodes:
         for node in nx_graph.nodes():
             if len(nodes_to_show) >= max_nodes:
                 break
             nodes_to_show.add(node)
 
-    # Add nodes
     for node_id in nodes_to_show:
         if node_id not in nx_graph:
             continue
-
         sym = graph.get_symbol(node_id)
         if not sym:
             continue
 
-        # Determine color and size
         if node_id in changed_set:
-            color = "#d63031"       # Red — changed
-            size = 30
-            border_color = "#ff7675"
+            color, size, border_color = "#d63031", 30, "#ff7675"
         elif node_id in impacted_set:
-            color = "#e17055"       # Orange — impacted
-            size = 25
-            border_color = "#fab1a0"
+            color, size, border_color = "#e17055", 25, "#fab1a0"
         elif "test" in sym.file_path.lower() or "Test" in sym.name:
-            color = "#0984e3"       # Blue — test
-            size = 20
-            border_color = "#74b9ff"
+            color, size, border_color = "#0984e3", 20, "#74b9ff"
         else:
-            color = "#00b894"       # Green — safe
-            size = 18
-            border_color = "#55efc4"
+            color, size, border_color = "#00b894", 18, "#55efc4"
 
-        # Shape by kind
         if sym.kind in (SymbolKind.CLASS, SymbolKind.INTERFACE):
             shape = "diamond"
         elif sym.kind == SymbolKind.CONSTRUCTOR:
@@ -134,13 +114,9 @@ def render_call_graph(
         else:
             shape = "dot"
 
-        # Label — short name only
-        label = sym.name
-
-        # Tooltip — full details
         status = "CHANGED" if node_id in changed_set else (
-            "IMPACTED" if node_id in impacted_set else "safe"
-        )
+            "IMPACTED" if node_id in impacted_set else "safe")
+
         title = (
             f"<b>{sym.qualified_name}</b><br>"
             f"Kind: {sym.kind.value}<br>"
@@ -150,50 +126,100 @@ def render_call_graph(
         )
 
         net.add_node(
-            node_id,
-            label=label,
-            title=title,
+            node_id, label=sym.name, title=title,
             color={"background": color, "border": border_color},
-            size=size,
-            shape=shape,
+            size=size, shape=shape,
         )
 
-    # Add edges (only between visible nodes)
     for u, v in nx_graph.edges():
         if u in nodes_to_show and v in nodes_to_show:
-            # Color edge red if it's part of the blast radius path
             if u in impacted_set and v in impacted_set:
-                edge_color = "#e17055"
-                width = 2
+                edge_color, width = "#e17055", 2
             elif u in impacted_set or v in impacted_set:
-                edge_color = "#fdcb6e"
-                width = 1.5
+                edge_color, width = "#fdcb6e", 1.5
             else:
-                edge_color = "#555"
-                width = 1
-
+                edge_color, width = "#555", 1
             net.add_edge(u, v, color=edge_color, width=width)
 
-    # Render
+    # Save and read HTML
     with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
         net.save_graph(f.name)
         html_content = Path(f.name).read_text()
 
-        # Inject dark background fix
-        html_content = html_content.replace(
-            "<body>",
-            '<body style="background-color: #0e1117; margin: 0; padding: 0;">'
-        )
+    # Count stats
+    node_count = len([n for n in nodes_to_show if n in nx_graph and graph.get_symbol(n)])
+    edge_count = sum(1 for u, v in nx_graph.edges() if u in nodes_to_show and v in nodes_to_show)
+    changed_count = len(changed_set)
+    trans_count = len(impacted_set - changed_set)
 
-        components.html(html_content, height=int(height.replace("px", "")) + 20)
+    # Inject fullscreen button, info bar, legend, and dark background
+    injection = f"""
+    <style>
+        body {{ background-color: #0e1117; margin: 0; padding: 0; }}
+        .fs-btn {{
+            position: fixed; top: 10px; right: 10px; z-index: 9999;
+            width: 38px; height: 38px; border-radius: 8px;
+            background: rgba(20,20,34,0.9); border: 1px solid rgba(255,255,255,0.15);
+            color: #ddd; font-size: 18px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s ease; backdrop-filter: blur(8px);
+        }}
+        .fs-btn:hover {{
+            background: rgba(225,112,85,0.7); border-color: #e17055;
+            color: #fff; transform: scale(1.05);
+        }}
+        .info-bar {{
+            position: fixed; bottom: 10px; left: 10px; z-index: 9999;
+            background: rgba(14,17,23,0.85); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px; padding: 6px 14px; color: #999;
+            font: 12px Inter, sans-serif; backdrop-filter: blur(8px);
+        }}
+        .info-bar b {{ color: #eee; }}
+        .legend-bar {{
+            position: fixed; bottom: 10px; right: 10px; z-index: 9999;
+            background: rgba(14,17,23,0.85); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px; padding: 6px 14px; color: #bbb;
+            font: 11px Inter, sans-serif; backdrop-filter: blur(8px);
+            display: flex; gap: 12px;
+        }}
+        .dot {{
+            display: inline-block; width: 8px; height: 8px;
+            border-radius: 50%; margin-right: 4px; vertical-align: middle;
+        }}
+        :fullscreen body, :-webkit-full-screen body {{ background: #0e1117 !important; }}
+        :fullscreen #mynetwork, :-webkit-full-screen #mynetwork {{
+            width: 100vw !important; height: 100vh !important;
+        }}
+    </style>
 
-    # Legend
-    legend_col1, legend_col2, legend_col3, legend_col4 = st.columns(4)
-    with legend_col1:
-        st.markdown("🔴 **Changed** — directly modified")
-    with legend_col2:
-        st.markdown("🟠 **Impacted** — transitively affected")
-    with legend_col3:
-        st.markdown("🟢 **Safe** — not in blast radius")
-    with legend_col4:
-        st.markdown("🔵 **Test** — test file")
+    <button class="fs-btn" onclick="toggleFs()" title="Toggle fullscreen">&#x26F6;</button>
+
+    <div class="info-bar">
+        <b>{node_count}</b> nodes &middot; <b>{edge_count}</b> edges &middot;
+        <span class="dot" style="background:#d63031"></span><b>{changed_count}</b> changed &middot;
+        <span class="dot" style="background:#e17055"></span><b>{trans_count}</b> impacted
+    </div>
+
+    <div class="legend-bar">
+        <span><span class="dot" style="background:#d63031"></span>Changed</span>
+        <span><span class="dot" style="background:#e17055"></span>Impacted</span>
+        <span><span class="dot" style="background:#00b894"></span>Safe</span>
+        <span><span class="dot" style="background:#0984e3"></span>Test</span>
+    </div>
+
+    <script>
+    function toggleFs() {{
+        var el = document.documentElement;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {{
+            (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+        }} else {{
+            (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        }}
+    }}
+    </script>
+    """
+
+    html_content = html_content.replace("<body>", f"<body>{injection}")
+
+    height_int = int(height.replace("px", ""))
+    components.html(html_content, height=height_int + 30)

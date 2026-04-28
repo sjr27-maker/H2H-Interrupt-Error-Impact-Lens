@@ -483,38 +483,74 @@ with tab_details:
             st.info("No transitive impact — changes are isolated.")
 
 # TAB 4: Timings
+# ═══════════════════════════════════════════
+# REPLACE YOUR ENTIRE TIMINGS TAB WITH THIS
+# Find: "# TAB 4: Timings" or "with tab_timings:"
+# Replace everything inside that tab block
+# ═══════════════════════════════════════════
+
+# TAB 4: Timings
 with tab_timings:
-    import pandas as pd
     t = result.timings
 
     st.markdown("### Pipeline Performance")
-    st.dataframe([
-        {"Stage": "Diff", "ms": round(t.diff_ms)},
-        {"Stage": "Parse", "ms": round(t.parse_ms)},
-        {"Stage": "Graph", "ms": round(t.graph_ms)},
-        {"Stage": "Impact", "ms": round(t.impact_ms)},
-        {"Stage": "Mapping", "ms": round(t.mapping_ms)},
-        {"Stage": "Total", "ms": round(t.total_ms)},
-    ], use_container_width=True, hide_index=True)
 
-    st.bar_chart(pd.DataFrame({
-        "Stage": ["Diff", "Parse", "Graph", "Impact", "Map"],
-        "ms": [t.diff_ms, t.parse_ms, t.graph_ms, t.impact_ms, t.mapping_ms],
-    }).set_index("Stage"))
+    # Timing table — use a simple list of dicts
+    timing_rows = [
+        {"Stage": "Diff Extraction", "Duration (ms)": int(t.diff_ms)},
+        {"Stage": "Parsing", "Duration (ms)": int(t.parse_ms)},
+        {"Stage": "Graph Building", "Duration (ms)": int(t.graph_ms)},
+        {"Stage": "Impact Analysis", "Duration (ms)": int(t.impact_ms)},
+        {"Stage": "Test Mapping", "Duration (ms)": int(t.mapping_ms)},
+        {"Stage": "**Total**", "Duration (ms)": int(t.total_ms)},
+    ]
+    st.dataframe(timing_rows, use_container_width=True, hide_index=True)
 
+    # Bar chart — use st.columns with st.progress bars instead of st.bar_chart
+    # This avoids the Altair/vega compatibility crash entirely
+    st.markdown("### Stage Breakdown")
+
+    max_time = max(t.diff_ms, t.parse_ms, t.graph_ms, t.impact_ms, t.mapping_ms, 1)
+    stages = [
+        ("Diff", t.diff_ms, "#74b9ff"),
+        ("Parse", t.parse_ms, "#a29bfe"),
+        ("Graph", t.graph_ms, "#55efc4"),
+        ("Impact", t.impact_ms, "#fdcb6e"),
+        ("Mapping", t.mapping_ms, "#fab1a0"),
+    ]
+
+    for name, ms, color in stages:
+        pct = ms / max_time
+        col_label, col_bar, col_val = st.columns([1, 4, 1])
+        with col_label:
+            st.markdown(f"**{name}**")
+        with col_bar:
+            st.progress(min(pct, 1.0))
+        with col_val:
+            st.markdown(f"`{int(ms)}ms`")
+
+    # Test reduction — also use progress bars
     if analysis.total_tests > 0:
         st.markdown("### Test Reduction")
         sel = len(impact.selected_tests)
-        st.bar_chart(pd.DataFrame({
-            "": ["Will Run", "Skipped"],
-            "Tests": [sel, analysis.total_tests - sel],
-        }).set_index(""))
+        total = analysis.total_tests
+        skipped = total - sel
+        red_pct = (1 - sel / total) * 100
 
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.metric("Tests to Run", f"{sel}")
+            st.caption(f"of {total} total")
+        with col_b:
+            st.metric("Tests Skipped", f"{skipped}")
+            st.caption(f"{red_pct:.0f}% reduction")
+
+    # Export
     st.divider()
     export = {
         "changed": impact.changed_symbols,
         "impacted_files": impact.impacted_files,
-        "tests": [{"id": t.id, "conf": score_map.get(t.id, (0,))[0]} for t in impact.selected_tests],
+        "tests": [{"id": tc.id, "conf": score_map.get(tc.id, (0,))[0]} for tc in impact.selected_tests],
         "timings": result.timings.summary(),
     }
     st.download_button("Download JSON", json.dumps(export, indent=2), "results.json", "application/json")
