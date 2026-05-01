@@ -127,7 +127,7 @@ See [docs/architecture.md](docs/architecture.md) for the full design document.
 
 ```bash
 git clone https://github.com/sjr27-maker/H2H-Interrupt-Error-Impact-Lens.git
-cd "IMPACT LENS/impactlens"
+cd "impactlens"
 
 python -m venv .venv
 source .venv/bin/activate         # Windows: .venv\Scripts\activate
